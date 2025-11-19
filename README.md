@@ -25,6 +25,31 @@ The codebase is organized into logical directories following the separation of c
 
 ---
 
+## 🧪 Core Components
+
+1. Dynamic Balanced Sampler (turbine_processing/sampler.py)
+
+This custom PyTorch Sampler is critical for addressing the common challenge of class and background imbalance in detection datasets.
+
+| Feature          | Description |
+|------------------|-------------|
+| **50/50 Split**  | Ensures each training epoch contains 50% wildlife images (positive samples) and 50% background images (negative samples). |
+| **Class Balancing** | Within the positive samples, minority wildlife classes (rare species) are oversampled with replacement, while majority classes are sampled without replacement. This ensures equal exposure to all species each epoch. |
+| **GPU Efficiency** | The `TurbineDataLoader` combines this sampler with `pin_memory=True` and multiple `num_workers` to keep the GPU fully utilized and avoid data-loading bottlenecks. |
+
+
+2. Main Entry Point (main.py)
+
+main.py is the orchestration script responsible for setting up and executing the end-to-end training pipeline.
+| Step              | Description |
+|-------------------|-------------|
+| **Configuration** | Loads hyperparameters (learning rate, batch size, device, paths, etc.) from `config/config.yaml`. |
+| **Model Setup**   | Initializes Faster R-CNN (ResNet-50 FPN backbone) and configures the correct number of output classes. |
+| **Optimization**  | Uses Adam optimizer and applies Gradient Clipping (implemented in `modeling/trainer.py`) to prevent exploding gradients and NaN losses. |
+| **Real-Time Logging** | Creates a TensorBoard `SummaryWriter` in `runs/` with timestamped folders for monitoring |
+| **Training Loop** | Executes epoch iterations, calling `trainer.train_one_epoch()` for training and `trainer.validate_metrics()` for evaluating validation mAP metrics. |
+
+
 ## ⚙️ Setup and Installation
 
 ### Prerequisites

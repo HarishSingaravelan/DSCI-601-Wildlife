@@ -1,0 +1,35 @@
+# config/config.yaml
+
+training:
+  num_epochs: 4
+  batch_size: 8
+  num_workers: 2
+  learning_rate: 0.0005
+  momentum: 0.9
+  weight_decay: 0.0002
+  print_every: 10
+  device: "cuda"          # will fall back to CPU if CUDA not available
+  output_model_path: "fasterrcnn_turbine_sample_adam.pth"
+
+data:
+  # Absolute or relative path to your dataset root
+  root_dir: "../../../shared/rc/turbine"
+
+  # Base directory for images, relative to root_dir.
+  # Since you said "under root there are many folders with images",
+  # and your JSON file_name fields already have those relative paths,
+  # we set this to "." (meaning: use root_dir itself as the image root).
+  images_root: "."
+
+  # COCO JSON file name, relative to root_dir
+  annotation_file: "coco_annotations_sample.json"
+
+model:
+  # Number of *foreground* classes (no background here)
+  num_object_classes: 5
+
+inference:
+  # Path to a model file for inference
+  model_path: "fasterrcnn_turbine.pth"
+  # Path to images for inference
+  images_path: "../../../shared/rc/turbine/test_images"

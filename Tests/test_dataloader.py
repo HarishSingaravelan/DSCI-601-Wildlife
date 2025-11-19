@@ -3,7 +3,7 @@
 import torch
 from torch.utils.data import Dataset
 
-from processing.dataloader import TurbineDataLoader
+from turbine_processing.dataloader import TurbineDataLoader
 
 
 class DummyDetectionDataset(Dataset):

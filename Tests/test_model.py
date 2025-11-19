@@ -1,5 +1,3 @@
-# tests/test_model.py
-
 import torch
 
 from modeling.model import get_model
@@ -8,7 +6,10 @@ from modeling.model import get_model
 def test_get_model_forward_pass():
     # 5 foreground classes + 1 background
     num_classes = 6
-    model = get_model(num_classes=num_classes)
+    
+    # --- OPTIMIZATION: Skip loading pre-trained weights for speed ---
+    model = get_model(num_classes=num_classes, load_weights=False)
+    
     model.eval()
 
     # Single dummy image

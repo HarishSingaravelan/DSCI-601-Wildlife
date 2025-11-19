@@ -2,7 +2,7 @@
 
 ## 🌟 Overview
 
-This repository contains the code for a **Wildlife Detection and Segmentation** project, leveraging a deep learning pipeline (e.g., RetinaNet, DeepLabV3) built using PyTorch. The goal is to train a model to accurately identify and localize various wildlife species within camera trap imagery using the **COCO data format**.
+This repository contains the code for a **Wildlife Detection and Segmentation** project, leveraging a deep learning pipeline (e.g., FasterRCNN, DETR and its variants) built using PyTorch. The goal is to train a model to accurately identify and localize various wildlife species within camera trap imagery using the **COCO data format**.
 
 The project is structured modularly, separating data handling, modeling, optimization, and utility functions for clarity and maintainability.
 

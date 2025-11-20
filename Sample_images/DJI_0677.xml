@@ -1,0 +1,26 @@
+<annotation>
+	<folder>20210912_OT_OF_01_NA_30_RGB</folder>
+	<filename>DJI_0677.JPG</filename>
+	<path>D:\Validation\20210912_OT_OF_NA_30_RGB\20210912_OT_OF_01_NA_30_RGB\DJI_0677.JPG</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>5280</width>
+		<height>3956</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>red_winged_blackbird</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>3481</xmin>
+			<ymin>2982</ymin>
+			<xmax>3580</xmax>
+			<ymax>3031</ymax>
+		</bndbox>
+	</object>
+</annotation>

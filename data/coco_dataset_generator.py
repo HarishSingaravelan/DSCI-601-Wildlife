@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 from typing import Dict, List, Any, Optional
 
-ROOT_DIR = "Test_2021_SY"
+ROOT_DIR = "Sample_images"
 OUTPUT_JSON = "coco_annotations.json"
 
 # Define extensions to check for. Order matters: it will check for .json first, then .xml.

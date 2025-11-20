@@ -32,6 +32,7 @@ class TurbineDataLoader:
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.use_balanced_sampler = use_balanced_sampler
+        
 
     @staticmethod
     def collate_fn(batch):

@@ -27,39 +27,37 @@ class AlbumentationsDetectionTransform:
         self.augment = augment
 
     def __call__(self, image, target):
-        # Convert PIL -> numpy
+       # Convert PIL → numpy
         if not isinstance(image, np.ndarray):
             image_np = np.array(image)
         else:
             image_np = image
 
-        # Prepare boxes/labels
         boxes = target["boxes"].tolist()
         labels = target["labels"].tolist()
 
-        # Run Albumentations
         transformed = self.augment(
             image=image_np,
             bboxes=boxes,
             labels=labels,
         )
 
-        # Get transformed image
         out_img = transformed["image"]
 
-        # --- FIX 1: Ensure float32 tensor in [0,1] ---
+        # Convert to tensor if needed
         if not isinstance(out_img, torch.Tensor):
             out_img = torch.from_numpy(out_img)
 
-        # If tensor is uint8 → convert to float32
         if out_img.dtype == torch.uint8:
             out_img = out_img.float() / 255.0
 
-        # Albumentations returns CHW for ToTensorV2, but if skipped:
         if out_img.ndim == 3 and out_img.shape[-1] == 3:
-            out_img = out_img.permute(2, 0, 1)  # HWC → CHW
+            out_img = out_img.permute(2, 0, 1)
 
-        # --- FIX 2: Rebuild boxes back to tensors ---
+        # PRINT SHAPE HERE
+        #print("[DEBUG] After transform image tensor shape:", out_img.shape)
+
+        # Rebuild boxes
         new_boxes = torch.as_tensor(transformed["bboxes"], dtype=torch.float32)
         new_labels = torch.as_tensor(transformed["labels"], dtype=torch.int64)
 
@@ -111,6 +109,8 @@ def get_train_transform() -> AlbumentationsDetectionTransform:
             min_visibility=0.3,
         ),
     )
+
+    
 
     return AlbumentationsDetectionTransform(train_tf)
 

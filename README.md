@@ -12,33 +12,19 @@ The project is structured modularly, separating data handling, modeling, optimiz
 
 The codebase is organized into logical directories following the separation of concerns principle.
 
-| Directory | Purpose | Key Files |
-| :--- | :--- | :--- |
-| **`data/`** | Source data and scripts for converting to the COCO format. | `generate_coco.py` |
-| **`config/`** | Configuration files for hyperparameters and paths. | `config.yaml` |
-| **`processing/`** | Components for data preparation and batching. | `dataset.py`, `augmenter.py`, `collate_function.py` |
-| **`modeling/`** | Core neural network architecture and training logic. | `model.py`, `trainer.py` |
-| **`optim/`** | Configuration for optimization algorithms. | `optimizer_setup.py`, `scheduler.py` |
-| **`utils/`** | Helper functions for metrics, logging, and error calculation. | `metrics_tracker.py`, `loss_function.py` |
-| **`tests/`** | Unit and integration tests for component validation. | `test_*.py` |
-| **Root** | Main entry point for running the pipeline. | `main.py` |
-
+| Directory | Purpose | Key Files | Detailed Docs |
+| :--- | :--- | :--- | :--- |
+| **`data/`** | Source data and scripts for converting to the COCO format. | `generate_coco.py` | [Dataset Guide](data/README.md) |
+| **`config/`** | Configuration files for hyperparameters and paths. | `config.yaml` | [Config Guide](config/README.md) |
+| **`processing/`** | Components for data preparation, loading, and batching. | `dataset.py`, `dataloader.py`, `transforms.py` | [Data Pipeline](turbine_processing/README.md) |
+| **`modeling/`** | Core neural network architecture and training logic. | `model.py`, `trainer.py` | [Model & Trainer](modeling/README.md) |
+| **`tests/`** | Unit and integration tests for component validation. | `test_*.py` | [Testing Guide](Tests/README.md) |
+| **Root** | Main entry point for running the pipeline. | `main.py` | — |
 ---
 
 ## 🧪 Core Components
 
-1. Dynamic Balanced Sampler (turbine_processing/sampler.py)
-
-This custom PyTorch Sampler is critical for addressing the common challenge of class and background imbalance in detection datasets.
-
-| Feature          | Description |
-|------------------|-------------|
-| **50/50 Split**  | Ensures each training epoch contains 50% wildlife images (positive samples) and 50% background images (negative samples). |
-| **Class Balancing** | Within the positive samples, minority wildlife classes (rare species) are oversampled with replacement, while majority classes are sampled without replacement. This ensures equal exposure to all species each epoch. |
-| **GPU Efficiency** | The `TurbineDataLoader` combines this sampler with `pin_memory=True` and multiple `num_workers` to keep the GPU fully utilized and avoid data-loading bottlenecks. |
-
-
-2. Main Entry Point (main.py)
+### Main Entry Point (main.py)
 
 main.py is the orchestration script responsible for setting up and executing the end-to-end training pipeline.
 | Step              | Description |
@@ -65,10 +51,10 @@ main.py is the orchestration script responsible for setting up and executing the
     cd DSCI-601-Wildlife
     ```
 
-2.  **Create and activate the environment:**
+2.  **Create & Activate Environment**
     ```bash
-    conda create -n wildlife python=3.9
-    conda activate wildlife
+    python -m venv wildlife-env
+    wildlife-env\Scripts\activate
     ```
 
 3.  **Install dependencies:**
@@ -77,16 +63,25 @@ main.py is the orchestration script responsible for setting up and executing the
     ```
 ---
 
+
 ## 🏃 Getting Started
 
-### 1. Data Preparation
+### 1. Generate COCO Dataset (from sample images)
 
-Place your raw imagery in `data/images/` and raw annotations in `data/annotations/`.
+This project includes sample images to help you test the dataset creation pipeline.
 
-Run the generation script to create the standardized COCO JSON files (for train, validation, and test splits):
+Run the COCO generator script:
+
+
 ```bash
 python data/coco_dataset_generator.py
 ```
+
+This script will:
+ - read images from the sample directory
+ - generate COCO annotations
+ - save output JSON files in root folder
+ - prepare the dataset structure used by the model
 
 ### 2. Training
 Execute the main training script. This script orchestrates the entire pipeline: loading data, instantiating the model, setting up the optimizer/scheduler, and running the Trainer.
@@ -94,9 +89,16 @@ Execute the main training script. This script orchestrates the entire pipeline: 
 ```Bash
 python main.py
 ```
-✅ Testing
-To ensure all components are working correctly, run the test suite:
+### 3. View Training Progress in TensorBoard
+#### 1. Start TensorBoard
+ Inside your project directory:
 
-```Bash
-pytest tests/
-```
+ ```
+ tensorboard --logdir runs --port 6006
+ ```
+
+ #### 2. Open Browser
+ ```
+ http://localhost:6006
+ ```
+

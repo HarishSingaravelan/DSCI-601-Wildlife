@@ -1,0 +1,28 @@
+{
+    "meta": {
+        "wildlife": "unique_inspection_id",
+        "model_id": "unique_model_version",
+        "inspection_utc": "2022-03-18 22:25:05.987023"
+    },
+    "carcasses": [
+        {
+            "src": "D:\\Validation\\20210912_OT_OF_NA_30_RGB\\20210912_OT_OF_01_NA_30_RGB\\DJI_0677",
+            "type": "rec",
+            "location": [
+                {
+                    "x": "0.678030303030303",
+                    "y": "0.7661779575328614"
+                },
+                {
+                    "x": "0.659280303030303",
+                    "y": "0.7537917087967644"
+                }
+            ],
+            "group": "songbird",
+            "class": "red_winged_blackbird",
+            "sex": "male",
+            "condition": "intact",
+            "source": "Known Location Ground Survey"
+        }
+    ]
+}

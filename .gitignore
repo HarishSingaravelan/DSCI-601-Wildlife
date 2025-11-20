@@ -130,3 +130,12 @@ venv.bak/
 
 # Project specific cache
 *.pytest_cache/
+
+# pickle files
+*.pth
+
+# Tensorboard runs
+runs/
+
+# coco annotations
+*.json

@@ -2,34 +2,28 @@
 
 training:
   num_epochs: 4
-  batch_size: 1 # Reduced for trial run
-  num_workers: 0 # Reduced for trial run
+  batch_size: 4
+  num_workers: 1
   learning_rate: 0.0005
-  momentum: 0.9
   weight_decay: 0.0002
-  print_every: 10
-  device: "cuda"          # will fall back to CPU if CUDA not available
+  device: "cuda"
   output_model_path: "fasterrcnn.pth"
 
 data:
-  # Absolute or relative path to your dataset root
-  root_dir: "."
-
-  # Base directory for images, relative to root_dir.
-  # Since you said "under root there are many folders with images",
-  # and your JSON file_name fields already have those relative paths,
-  # we set this to "." (meaning: use root_dir itself as the image root).
-  images_root: "."
-
-  # COCO JSON file name, relative to root_dir
-  annotation_file: "coco_annotations.json"
+  # Training data
+  train_root_dir: "turbine_split/train"
+  train_images_root: "../.."  
+  train_annotation_file: "annotations.json"
+  
+  # Validation data
+  val_root_dir: "turbine_split/val"
+  val_images_root: "../.."  
+  val_annotation_file: "annotations.json"
+  
+  # Test data
+  test_root_dir: "turbine_split/test"
+  test_images_root: "../.."  
+  test_annotation_file: "annotations.json"
 
 model:
-  # Number of *foreground* classes (no background here)
   num_object_classes: 5
-
-inference:
-  # Path to a model file for inference
-  model_path: "fasterrcnn_turbine.pth"
-  # Path to images for inference
-  images_path: "../../../shared/rc/turbine/test_images"

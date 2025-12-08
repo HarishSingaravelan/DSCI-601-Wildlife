@@ -32,7 +32,6 @@ class TurbineDataLoader:
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.use_balanced_sampler = use_balanced_sampler
-        
 
     @staticmethod
     def collate_fn(batch):
@@ -55,7 +54,7 @@ class TurbineDataLoader:
         if self.use_balanced_sampler:
             sampler = DynamicBalancedSampler(
                 dataset=self.train_dataset,
-                epoch_size=len(self.train_dataset),  # keep epoch size equal to dataset length
+                epoch_size=len(self.train_dataset),  # keeps epoch size equal to dataset length
             )
             train_loader = DataLoader(
                 self.train_dataset,
@@ -65,6 +64,8 @@ class TurbineDataLoader:
                 num_workers=self.num_workers,
                 collate_fn=self.collate_fn,
                 pin_memory=pin_memory, # Enabled
+                persistent_workers=True,
+                prefetch_factor=2
             )
         else:
             train_loader = DataLoader(
@@ -74,6 +75,8 @@ class TurbineDataLoader:
                 num_workers=self.num_workers,
                 collate_fn=self.collate_fn,
                 pin_memory=pin_memory, # Enabled
+                persistent_workers=True,
+                prefetch_factor=2
             )
 
         val_loader = DataLoader(
@@ -83,6 +86,8 @@ class TurbineDataLoader:
             num_workers=self.num_workers,
             collate_fn=self.collate_fn,
             pin_memory=pin_memory, # Enabled
+            persistent_workers=True,
+            prefetch_factor=2
         )
 
         return train_loader, val_loader

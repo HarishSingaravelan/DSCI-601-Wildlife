@@ -67,7 +67,7 @@ class DynamicBalancedSampler(Sampler):
         return self.epoch_size
 
     def _rng(self):
-        # Create a per-iteration RNG
+        # Create a per-iteration RNG; seed with (seed + time) if seed provided
         if self.seed is None:
             return random.Random(time.time_ns())
         return random.Random(self.seed + int(time.time_ns() & 0xFFFFF))

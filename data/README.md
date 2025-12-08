@@ -88,3 +88,25 @@ To run tests, execute:
   ]
 }
 ```
+
+
+```
+python data/split_dataset.py \
+  --source_root ../../../shared/rc/turbine \
+  --annotation_file ../../../shared/rc/turbine/coco_annotations_updated.json \
+  --output_root ../../../shared/rc/turbine/turbine_split \
+  --train_ratio 0.7 \
+  --val_ratio 0.15 \
+  --test_ratio 0.15
+```
+
+For windows
+```
+python data/split_dataset.py `
+    --source_root . `
+    --annotation_file coco_annotations.json `
+    --output_root turbine_split `
+    --train_ratio 0.7 `
+    --val_ratio 0.15 `
+    --test_ratio 0.15
+```

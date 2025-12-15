@@ -18,6 +18,7 @@ The codebase is organized into logical directories following the separation of c
 | **`config/`** | Configuration files for hyperparameters and paths. | `config.yaml` | [Config Guide](config/README.md) |
 | **`processing/`** | Components for data preparation, loading, and batching. | `dataset.py`, `dataloader.py`, `transforms.py` | [Data Pipeline](turbine_processing/README.md) |
 | **`modeling/`** | Core neural network architecture and training logic. | `model.py`, `trainer.py` | [Model & Trainer](modeling/README.md) |
+| **`inference/`** | Model evaluation and analysis scripts. | `mAPGenerator.py`, `confusionMatrixGenerator.py`,`inference.py` | [inference & Evaluation Guide](inference/README.md) |
 | **`tests/`** | Unit and integration tests for component validation. | `test_*.py` | [Testing Guide](Tests/README.md) |
 | **Root** | Main entry point for running the pipeline. | `main.py` | — |
 ---

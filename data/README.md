@@ -88,20 +88,38 @@ To run tests, execute:
   ]
 }
 ```
+## 🚀 Data Splitting and Execution
 
+The final part of your utility is the script used to split the generated COCO dataset into training, validation, and test subsets based on specified ratios.
 
-```
+The script is assumed to be located at: `data/split_dataset.py`
+
+### 🖥️ Execution
+
+Use the following commands to execute the splitting script, modifying the path arguments (`--source_root`, `--annotation_file`, etc.) to match your specific environment.
+
+#### 1. Linux / macOS (Bash)
+
+Use the backslash (`\`) to continue the command across multiple lines for better readability.
+Here the location file is for the Remote system. Add you local system or replace it with windows folder location
+
+```bash
 python data/split_dataset.py \
-  --source_root ../../../shared/rc/turbine \
-  --annotation_file ../../../shared/rc/turbine/coco_annotations_updated.json \
-  --output_root ../../../shared/rc/turbine/turbine_split \
-  --train_ratio 0.7 \
-  --val_ratio 0.15 \
-  --test_ratio 0.15
+    --source_root ../../../shared/rc/turbine \
+    --annotation_file ../../../shared/rc/turbine/coco_annotations_updated.json \
+    --output_root ../../../shared/rc/turbine/turbine_split \
+    --train_ratio 0.7 \
+    --val_ratio 0.15 \
+    --test_ratio 0.15
 ```
 
-For windows
-```
+#### 2. Windows (PowerShell or Command Prompt)
+
+Use the backtick (`` ` ``) for line continuation in PowerShell, or combine the arguments onto a single line for Command Prompt.
+
+**PowerShell:**
+
+```powershell
 python data/split_dataset.py `
     --source_root . `
     --annotation_file coco_annotations.json `
@@ -110,3 +128,26 @@ python data/split_dataset.py `
     --val_ratio 0.15 `
     --test_ratio 0.15
 ```
+
+**Command Prompt:**
+
+```cmd
+python data/split_dataset.py --source_root . --annotation_file coco_annotations.json --output_root turbine_split --train_ratio 0.7 --val_ratio 0.15 --test_ratio 0.15
+```
+
+### 📚 Argument Descriptions
+
+| Argument | Description | Example Value |
+|----------|-------------|---------------|
+| `--source_root` | The root directory containing all image files referenced in the annotation file. | `../../../shared/rc/turbine` |
+| `--annotation_file` | The path to the complete COCO-style JSON annotation file. | `coco_annotations_updated.json` |
+| `--output_root` | The directory where the `train/`, `val/`, and `test/` annotation files and image symlinks will be saved. | `turbine_split` |
+| `--train_ratio` | The fraction of the dataset to allocate for training. | `0.7` |
+| `--val_ratio` | The fraction of the dataset to allocate for validation. | `0.15` |
+| `--test_ratio` | The fraction of the dataset to allocate for testing. | `0.15` |
+
+### 📝 Notes
+
+- Ensure that the ratios (`--train_ratio`, `--val_ratio`, `--test_ratio`) sum to 1.0.
+- The script will create subdirectories within `--output_root` for each split (train, val, test).
+- Image files are typically symlinked rather than copied to save disk space.

@@ -114,6 +114,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+wild/
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -139,3 +140,4 @@ runs/
 
 # coco annotations
 /*.json
+turbine_split/

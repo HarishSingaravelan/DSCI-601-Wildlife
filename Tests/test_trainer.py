@@ -8,10 +8,11 @@ from torch.utils.data import Dataset, DataLoader
 
 from modeling.model import get_model
 from modeling.trainer import Trainer
-from processing.dataloader import TurbineDataLoader
+from turbine_processing.dataloader import TurbineDataLoader
 
 
 class TinyDetectionDataset(Dataset):
+    """A minimal dataset for fast unit testing."""
     def __len__(self):
         return 2
 
@@ -29,7 +30,18 @@ class TinyDetectionDataset(Dataset):
 
 def test_trainer_one_epoch_runs():
     dataset = TinyDetectionDataset()
-    loader = DataLoader(
+    
+    # --- 1. Create Training Loader ---
+    train_loader = DataLoader(
+        dataset,
+        batch_size=1,
+        shuffle=False,
+        num_workers=0,
+        collate_fn=TurbineDataLoader.collate_fn,
+    )
+    
+    # --- 2. Create Validation Loader ---
+    val_loader = DataLoader(
         dataset,
         batch_size=1,
         shuffle=False,
@@ -47,7 +59,13 @@ def test_trainer_one_epoch_runs():
     )
 
     device = torch.device("cpu")
-    trainer = Trainer(model=model, optimizer=optimizer, device=device)
+    trainer = Trainer(model=model, optimizer=optimizer, device=device) 
 
-    avg_loss = trainer.train_one_epoch(data_loader=loader, epoch=0, print_every=10)
-    assert avg_loss >= 0.0
+    results = trainer.train_one_epoch(
+        train_loader=train_loader, 
+        val_loader=val_loader, 
+        epoch=0
+    )
+    
+    assert results["train_loss"] >= 0.0
+    assert results["val_loss"] >= 0.0

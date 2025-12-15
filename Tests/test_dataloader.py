@@ -33,7 +33,7 @@ def test_turbine_dataloader_batch_structure():
         train_dataset=train_ds,
         val_dataset=val_ds,
         batch_size=2,
-        num_workers=0,
+        num_workers=1, 
     )
 
     train_loader, _ = loader_builder.get_loaders()

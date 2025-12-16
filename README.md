@@ -102,6 +102,30 @@ This script will:
  - save output JSON files in root folder
  - prepare the dataset structure used by the model
 
+
+```bash
+# Linux/macOS
+python data/split_dataset.py \
+    --source_root . \
+    --annotation_file coco_annotations.json \
+    --output_root turbine_split \
+    --train_ratio 0.7 \
+    --val_ratio 0.15 \
+    --test_ratio 0.15
+```
+
+or
+
+```bash
+# Windows PowerShell
+python data/split_dataset.py `
+    --source_root . `
+    --annotation_file coco_annotations.json `
+    --output_root turbine_split `
+    --train_ratio 0.7 `
+    --val_ratio 0.15 `
+    --test_ratio 0.15
+```
 ### 2. Training
 Execute the main training script. This script orchestrates the entire pipeline: loading data, instantiating the model, setting up the optimizer/scheduler, and running the Trainer.
 

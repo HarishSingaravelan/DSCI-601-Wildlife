@@ -1,0 +1,268 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>inference.inference &mdash; DSCI-601-WILDLIFE 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            DSCI-601-WILDLIFE
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">data package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modeling.html">modeling package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../turbine_processing.html">turbine_processing package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../inference.html">inference package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DSCI-601-WILDLIFE</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">inference.inference</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for inference.inference</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="c1"># 1. SETUP PATHS</span>
+<span class="c1">#    This ensures we can import from the root directory</span>
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="n">current_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">parent_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">current_dir</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">parent_dir</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="c1"># 2. PROJECT IMPORTS</span>
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">modeling.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">modeling.trainer</span><span class="w"> </span><span class="kn">import</span> <span class="n">Trainer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">turbine_processing.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_val_transform</span>
+
+<span class="c1"># -------------------------------------------------------------------</span>
+<span class="c1"># 3. HELPER FUNCTIONS</span>
+<span class="c1"># -------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="load_config">
+<a class="viewcode-back" href="../../inference.inference.html#inference.inference.load_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Mock configuration values necessary for model and device setup.</span>
+<span class="sd">    Ideally, you would load this from your config.yaml file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;num_object_classes&quot;</span><span class="p">:</span> <span class="mi">5</span><span class="p">},</span> 
+        <span class="s2">&quot;training&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;cuda&quot;</span><span class="p">,</span>
+            <span class="c1"># Ensure this filename matches exactly what main.py saved</span>
+            <span class="s2">&quot;output_model_path&quot;</span><span class="p">:</span> <span class="s2">&quot;fasterrcnn_turbine_adam_transforms.pth&quot;</span> 
+        <span class="p">}</span>
+    <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="preprocess_image">
+<a class="viewcode-back" href="../../inference.inference.html#inference.inference.preprocess_image">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">preprocess_image</span><span class="p">(</span><span class="n">image_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Loads an image, applies validation transforms, and prepares it for inference.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Loading image from: </span><span class="si">{</span><span class="n">image_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># 1. Load Image</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">image_path</span><span class="p">)</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="s2">&quot;RGB&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileNotFoundError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Image not found at </span><span class="si">{</span><span class="n">image_path</span><span class="si">}</span><span class="s2">. Creating a dummy random image.&quot;</span><span class="p">)</span>
+        <span class="n">dummy_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">800</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dummy_tensor</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="c1"># 2. Create Dummy Target</span>
+    <span class="n">dummy_target</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;boxes&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+        <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="c1"># 3. Apply Transforms</span>
+    <span class="n">val_transform</span> <span class="o">=</span> <span class="n">get_val_transform</span><span class="p">()</span>
+    <span class="n">tensor_img</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">val_transform</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dummy_target</span><span class="p">)</span>
+
+    <span class="c1"># 4. Final Formatting</span>
+    <span class="c1"># Ensure float32 and move to GPU/CPU</span>
+    <span class="k">return</span> <span class="n">tensor_img</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_inference">
+<a class="viewcode-back" href="../../inference.inference.html#inference.inference.run_inference">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_inference</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt; Inference script starting up...&quot;</span><span class="p">)</span>
+
+    <span class="c1"># --- A. Configuration ---</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">()</span>
+    <span class="n">device_str</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;training&quot;</span><span class="p">][</span><span class="s2">&quot;device&quot;</span><span class="p">]</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device_str</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s2">&quot;cpu&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Using device: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># --- B. Model Initialization ---</span>
+    <span class="n">num_object_classes</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">][</span><span class="s2">&quot;num_object_classes&quot;</span><span class="p">]</span>
+    <span class="n">num_classes</span> <span class="o">=</span> <span class="n">num_object_classes</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">num_classes</span><span class="o">=</span><span class="n">num_classes</span><span class="p">)</span>
+
+    <span class="c1"># --- C. Load Weights ---</span>
+    <span class="n">weights_path</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;training&quot;</span><span class="p">][</span><span class="s2">&quot;output_model_path&quot;</span><span class="p">]</span>
+    
+    <span class="c1"># Check if the weight file exists in the root directory</span>
+    <span class="n">full_weights_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">,</span> <span class="n">weights_path</span><span class="p">)</span>
+    
+    <span class="c1"># Fallback: check if it exists relative to current script</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">full_weights_path</span><span class="p">):</span>
+        <span class="n">full_weights_path</span> <span class="o">=</span> <span class="n">weights_path</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">full_weights_path</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Model weights not found at: </span><span class="si">{</span><span class="n">full_weights_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Please ensure you have run main.py and the .pth file exists.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Loading model weights from: </span><span class="si">{</span><span class="n">full_weights_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">full_weights_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+
+    <span class="c1"># --- D. Trainer/Predictor Setup ---</span>
+    <span class="n">trainer</span> <span class="o">=</span> <span class="n">Trainer</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">log_dir</span><span class="o">=</span><span class="s2">&quot;runs/inference_only&quot;</span><span class="p">)</span>
+
+    <span class="c1"># --- E. Prepare Input ---</span>
+    <span class="n">inference_image_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">,</span> <span class="s2">&quot;Sample_images&quot;</span><span class="p">,</span> <span class="s2">&quot;DJI_0674.JPG&quot;</span><span class="p">)</span>
+    
+    <span class="n">input_tensor</span> <span class="o">=</span> <span class="n">preprocess_image</span><span class="p">(</span><span class="n">inference_image_path</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    
+    
+    <span class="n">input_batch</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_tensor</span><span class="p">]</span>
+
+    <span class="c1"># --- F. Run Inference ---</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[INFO] Running model inference...&quot;</span><span class="p">)</span>
+    <span class="n">predictions</span> <span class="o">=</span> <span class="n">trainer</span><span class="o">.</span><span class="n">inference</span><span class="p">(</span><span class="n">input_batch</span><span class="p">)</span>
+
+    <span class="c1"># --- G. Process Results ---</span>
+    <span class="k">if</span> <span class="n">predictions</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">--- Model Predictions (First Image) ---&quot;</span><span class="p">)</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c1"># Move to CPU and convert to numpy for easy printing</span>
+        <span class="n">boxes</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="s2">&quot;boxes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="s2">&quot;scores&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        
+        <span class="c1"># Filter by confidence</span>
+        <span class="n">confidence_threshold</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">keep</span> <span class="o">=</span> <span class="n">scores</span> <span class="o">&gt;</span> <span class="n">confidence_threshold</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">keep</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">keep</span><span class="p">)</span><span class="si">}</span><span class="s2"> detections above </span><span class="si">{</span><span class="n">confidence_threshold</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Map IDs to names based on your dataset</span>
+            <span class="n">class_map</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;red_winged_blackbird&quot;</span><span class="p">,</span>
+                <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;mammal_carcass&quot;</span><span class="p">,</span> 
+                <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;hawk_species&quot;</span><span class="p">,</span> 
+                <span class="mi">4</span><span class="p">:</span> <span class="s2">&quot;gull_species&quot;</span><span class="p">,</span> 
+                <span class="mi">5</span><span class="p">:</span> <span class="s2">&quot;trash&quot;</span>
+            <span class="p">}</span> 
+            
+            <span class="c1"># Zip and iterate through the kept predictions</span>
+            <span class="k">for</span> <span class="n">box</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">score</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">boxes</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">labels</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">scores</span><span class="p">[</span><span class="n">keep</span><span class="p">]):</span>
+                <span class="n">label_name</span> <span class="o">=</span> <span class="n">class_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Class </span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="c1"># Convert box to integer coordinates</span>
+                <span class="n">box_int</span> <span class="o">=</span> <span class="n">box</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">label_name</span><span class="si">:</span><span class="s2">&lt;20</span><span class="si">}</span><span class="s2"> | Score: </span><span class="si">{</span><span class="n">score</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> | Box: </span><span class="si">{</span><span class="n">box_int</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No objects detected with confidence &gt; </span><span class="si">{</span><span class="n">confidence_threshold</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Model returned empty prediction results.&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">run_inference</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Harish, Dayesh.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

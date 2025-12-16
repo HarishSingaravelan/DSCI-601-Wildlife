@@ -1,0 +1,685 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>inference.mAPGenerator &mdash; DSCI-601-WILDLIFE 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            DSCI-601-WILDLIFE
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">data package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modeling.html">modeling package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../turbine_processing.html">turbine_processing package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../inference.html">inference package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DSCI-601-WILDLIFE</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">inference.mAPGenerator</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for inference.mAPGenerator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">mAP Evaluation Script for Object Detection Models</span>
+<span class="sd">Evaluates a trained .pth model on test dataset and computes mAP metrics.</span>
+<span class="sd">Saves results to TensorBoard for visualization.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataLoader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torch.utils.tensorboard</span><span class="w"> </span><span class="kn">import</span> <span class="n">SummaryWriter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">torchmetrics.detection</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeanAveragePrecision</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span><span class="o">,</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))))</span>
+
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span> <span class="k">as</span> <span class="n">PILImage</span>
+
+<span class="c1"># Import your custom modules</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">turbine_processing.dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">TurbineCocoDataset</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">turbine_processing.dataloader</span><span class="w"> </span><span class="kn">import</span> <span class="n">TurbineDataLoader</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">modeling.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model</span>
+
+
+<div class="viewcode-block" id="load_config">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.load_config">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_config</span><span class="p">(</span><span class="n">config_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load configuration from YAML file.&quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+
+
+<div class="viewcode-block" id="evaluate_model">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.evaluate_model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">evaluate_model</span><span class="p">(</span>
+    <span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+    <span class="n">test_loader</span><span class="p">:</span> <span class="n">DataLoader</span><span class="p">,</span>
+    <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">list</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Evaluate model and compute mAP metrics with detailed predictions.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        model: PyTorch model</span>
+<span class="sd">        test_loader: Test DataLoader</span>
+<span class="sd">        device: Device to run evaluation on</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Tuple of (metrics dict, all_predictions list, all_targets list)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    
+    <span class="c1"># Initialize metrics calculator</span>
+    <span class="n">metric_calculator</span> <span class="o">=</span> <span class="n">MeanAveragePrecision</span><span class="p">(</span><span class="n">box_format</span><span class="o">=</span><span class="s2">&quot;xyxy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    
+    <span class="c1"># Store all predictions and targets for detailed analysis</span>
+    <span class="n">all_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">all_targets</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting evaluation...&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">images</span><span class="p">,</span> <span class="n">targets</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">test_loader</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Evaluating&quot;</span><span class="p">):</span>
+            <span class="c1"># Move data to device</span>
+            <span class="n">images</span> <span class="o">=</span> <span class="p">[</span><span class="n">img</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">images</span><span class="p">]</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="p">[{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">t</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">]</span>
+            
+            <span class="c1"># Get predictions</span>
+            <span class="n">predictions</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">images</span><span class="p">)</span>
+            
+            <span class="c1"># Store for detailed analysis</span>
+            <span class="n">all_predictions</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span>
+            <span class="n">all_targets</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">targets</span><span class="p">)</span>
+            
+            <span class="c1"># Update metrics</span>
+            <span class="n">metric_calculator</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+    
+    <span class="c1"># Compute final metrics</span>
+    <span class="n">metrics</span> <span class="o">=</span> <span class="n">metric_calculator</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+    
+    <span class="k">return</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">all_predictions</span><span class="p">,</span> <span class="n">all_targets</span></div>
+
+
+
+<div class="viewcode-block" id="print_metrics">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.print_metrics">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">print_metrics</span><span class="p">(</span><span class="n">metrics</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Print metrics in a formatted way.&quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">50</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mAP EVALUATION RESULTS&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">50</span><span class="p">)</span>
+    
+    <span class="n">metric_names</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;map&#39;</span><span class="p">:</span> <span class="s1">&#39;mAP (IoU=0.50:0.95)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;map_50&#39;</span><span class="p">:</span> <span class="s1">&#39;mAP @ IoU=0.50&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;map_75&#39;</span><span class="p">:</span> <span class="s1">&#39;mAP @ IoU=0.75&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;map_small&#39;</span><span class="p">:</span> <span class="s1">&#39;mAP (small objects)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;map_medium&#39;</span><span class="p">:</span> <span class="s1">&#39;mAP (medium objects)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;map_large&#39;</span><span class="p">:</span> <span class="s1">&#39;mAP (large objects)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mar_1&#39;</span><span class="p">:</span> <span class="s1">&#39;MAR (max 1 detection)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mar_10&#39;</span><span class="p">:</span> <span class="s1">&#39;MAR (max 10 detections)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mar_100&#39;</span><span class="p">:</span> <span class="s1">&#39;MAR (max 100 detections)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mar_small&#39;</span><span class="p">:</span> <span class="s1">&#39;MAR (small objects)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mar_medium&#39;</span><span class="p">:</span> <span class="s1">&#39;MAR (medium objects)&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mar_large&#39;</span><span class="p">:</span> <span class="s1">&#39;MAR (large objects)&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+    
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">metric_names</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">metrics</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">30s</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">value</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">50</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="compute_precision_recall_curve">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.compute_precision_recall_curve">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">compute_precision_recall_curve</span><span class="p">(</span>
+    <span class="n">predictions</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">targets</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span>
+    <span class="n">iou_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">num_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute Precision-Recall curve for each class at a given IoU threshold.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        predictions: List of prediction dictionaries</span>
+<span class="sd">        targets: List of target dictionaries</span>
+<span class="sd">        iou_threshold: IoU threshold for matching (default: 0.5)</span>
+<span class="sd">        num_classes: Number of classes (excluding background)</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Dictionary with precision, recall arrays for each class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pr_curves</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="k">for</span> <span class="n">class_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_classes</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>  <span class="c1"># Skip background (class 0)</span>
+        <span class="c1"># Collect all predictions and ground truths for this class</span>
+        <span class="n">class_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">class_targets</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">pred</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">):</span>
+            <span class="c1"># Filter predictions for this class</span>
+            <span class="k">if</span> <span class="s1">&#39;labels&#39;</span> <span class="ow">in</span> <span class="n">pred</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">class_mask</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">class_id</span>
+                <span class="k">if</span> <span class="n">class_mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                    <span class="n">class_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                        <span class="s1">&#39;boxes&#39;</span><span class="p">:</span> <span class="n">pred</span><span class="p">[</span><span class="s1">&#39;boxes&#39;</span><span class="p">][</span><span class="n">class_mask</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                        <span class="s1">&#39;scores&#39;</span><span class="p">:</span> <span class="n">pred</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">][</span><span class="n">class_mask</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                    <span class="p">})</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">class_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;boxes&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)),</span> <span class="s1">&#39;scores&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">class_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;boxes&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)),</span> <span class="s1">&#39;scores&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)})</span>
+            
+            <span class="c1"># Filter targets for this class</span>
+            <span class="k">if</span> <span class="s1">&#39;labels&#39;</span> <span class="ow">in</span> <span class="n">target</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">target_mask</span> <span class="o">=</span> <span class="n">target</span><span class="p">[</span><span class="s1">&#39;labels&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">class_id</span>
+                <span class="n">class_targets</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s1">&#39;boxes&#39;</span><span class="p">:</span> <span class="n">target</span><span class="p">[</span><span class="s1">&#39;boxes&#39;</span><span class="p">][</span><span class="n">target_mask</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                <span class="p">})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">class_targets</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;boxes&#39;</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">))})</span>
+        
+        <span class="c1"># Compute precision-recall at different confidence thresholds</span>
+        <span class="n">precisions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">recalls</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">confidence_thresholds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">101</span><span class="p">)</span>  <span class="c1"># 0.00, 0.01, ..., 1.00</span>
+        
+        <span class="n">total_gt</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;boxes&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">class_targets</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">total_gt</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pr_curves</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;class_</span><span class="si">{</span><span class="n">class_id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;precision&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">confidence_thresholds</span><span class="p">)),</span>
+                <span class="s1">&#39;recall&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">confidence_thresholds</span><span class="p">)),</span>
+                <span class="s1">&#39;thresholds&#39;</span><span class="p">:</span> <span class="n">confidence_thresholds</span>
+            <span class="p">}</span>
+            <span class="k">continue</span>
+        
+        <span class="k">for</span> <span class="n">conf_thresh</span> <span class="ow">in</span> <span class="n">confidence_thresholds</span><span class="p">:</span>
+            <span class="n">tp</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">fp</span> <span class="o">=</span> <span class="mi">0</span>
+            
+            <span class="k">for</span> <span class="n">pred</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">class_predictions</span><span class="p">,</span> <span class="n">class_targets</span><span class="p">):</span>
+                <span class="c1"># Filter by confidence threshold</span>
+                <span class="n">conf_mask</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="s1">&#39;scores&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">conf_thresh</span>
+                <span class="n">pred_boxes</span> <span class="o">=</span> <span class="n">pred</span><span class="p">[</span><span class="s1">&#39;boxes&#39;</span><span class="p">][</span><span class="n">conf_mask</span><span class="p">]</span>
+                <span class="n">target_boxes</span> <span class="o">=</span> <span class="n">target</span><span class="p">[</span><span class="s1">&#39;boxes&#39;</span><span class="p">]</span>
+                
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pred_boxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_boxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">fp</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pred_boxes</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                
+                <span class="c1"># Compute IoU between all pred and target boxes</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">torchvision.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">box_iou</span>
+                <span class="n">ious</span> <span class="o">=</span> <span class="n">box_iou</span><span class="p">(</span><span class="n">pred_boxes</span><span class="p">,</span> <span class="n">target_boxes</span><span class="p">)</span>
+                
+                <span class="c1"># Match predictions to targets (greedy matching)</span>
+                <span class="n">matched_targets</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">pred_boxes</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_boxes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">fp</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">continue</span>
+                    
+                    <span class="n">max_iou</span><span class="p">,</span> <span class="n">max_idx</span> <span class="o">=</span> <span class="n">ious</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span> <span class="n">ious</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+                    
+                    <span class="k">if</span> <span class="n">max_iou</span> <span class="o">&gt;=</span> <span class="n">iou_threshold</span> <span class="ow">and</span> <span class="n">max_idx</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">matched_targets</span><span class="p">:</span>
+                        <span class="n">tp</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">matched_targets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">max_idx</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">fp</span> <span class="o">+=</span> <span class="mi">1</span>
+            
+            <span class="n">precision</span> <span class="o">=</span> <span class="n">tp</span> <span class="o">/</span> <span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="n">tp</span> <span class="o">+</span> <span class="n">fp</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="n">recall</span> <span class="o">=</span> <span class="n">tp</span> <span class="o">/</span> <span class="n">total_gt</span> <span class="k">if</span> <span class="n">total_gt</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+            
+            <span class="n">precisions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">precision</span><span class="p">)</span>
+            <span class="n">recalls</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">recall</span><span class="p">)</span>
+        
+        <span class="n">pr_curves</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;class_</span><span class="si">{</span><span class="n">class_id</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;precision&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">precisions</span><span class="p">),</span>
+            <span class="s1">&#39;recall&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">recalls</span><span class="p">),</span>
+            <span class="s1">&#39;thresholds&#39;</span><span class="p">:</span> <span class="n">confidence_thresholds</span>
+        <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="n">pr_curves</span></div>
+
+
+
+<div class="viewcode-block" id="plot_precision_recall_curves">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.plot_precision_recall_curves">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_precision_recall_curves</span><span class="p">(</span><span class="n">pr_curves</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">class_names</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PILImage</span><span class="o">.</span><span class="n">Image</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot Precision-Recall curves for all classes.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        pr_curves: Dictionary with PR data for each class</span>
+<span class="sd">        class_names: List of class names (optional)</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        PIL Image of the plot</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+    
+    <span class="k">for</span> <span class="n">class_key</span><span class="p">,</span> <span class="n">pr_data</span> <span class="ow">in</span> <span class="n">pr_curves</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">class_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">class_key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">class_names</span><span class="p">[</span><span class="n">class_id</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">class_names</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">class_names</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">class_id</span> <span class="k">else</span> <span class="sa">f</span><span class="s1">&#39;Class </span><span class="si">{</span><span class="n">class_id</span><span class="si">}</span><span class="s1">&#39;</span>
+        
+        <span class="c1"># Sort by recall for proper curve plotting</span>
+        <span class="n">sorted_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;recall&#39;</span><span class="p">])</span>
+        <span class="n">recall</span> <span class="o">=</span> <span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;recall&#39;</span><span class="p">][</span><span class="n">sorted_indices</span><span class="p">]</span>
+        <span class="n">precision</span> <span class="o">=</span> <span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;precision&#39;</span><span class="p">][</span><span class="n">sorted_indices</span><span class="p">]</span>
+        
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">recall</span><span class="p">,</span> <span class="n">precision</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">)</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Recall&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Precision&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Precision-Recall Curves (IoU=0.5)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+    
+    <span class="c1"># Convert plot to image</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">150</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+    <span class="n">buf</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">PILImage</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">img</span></div>
+
+
+
+<div class="viewcode-block" id="log_metrics_to_tensorboard">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.log_metrics_to_tensorboard">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">log_metrics_to_tensorboard</span><span class="p">(</span>
+    <span class="n">metrics</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+    <span class="n">writer</span><span class="p">:</span> <span class="n">SummaryWriter</span><span class="p">,</span>
+    <span class="n">predictions</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">targets</span><span class="p">:</span> <span class="nb">list</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">num_classes</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="n">global_step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Log all metrics to TensorBoard including detailed PR curves.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        metrics: Dictionary of computed metrics</span>
+<span class="sd">        writer: TensorBoard SummaryWriter</span>
+<span class="sd">        predictions: List of all predictions (for detailed curves)</span>
+<span class="sd">        targets: List of all targets (for detailed curves)</span>
+<span class="sd">        num_classes: Number of classes (excluding background)</span>
+<span class="sd">        global_step: Global step for logging (default: 0 for final evaluation)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Logging metrics to TensorBoard...&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Main mAP metrics</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_Total&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_50&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_50&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_75&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_75&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    
+    <span class="c1"># ===== NEW: Log mAP at different IoU thresholds =====</span>
+    <span class="c1"># The metric calculator computes mAP at IoU thresholds from 0.50 to 0.95 (step 0.05)</span>
+    <span class="c1"># We can extract individual IoU threshold results</span>
+    <span class="n">iou_thresholds</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.50</span><span class="p">,</span> <span class="mf">0.55</span><span class="p">,</span> <span class="mf">0.60</span><span class="p">,</span> <span class="mf">0.65</span><span class="p">,</span> <span class="mf">0.70</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">,</span> <span class="mf">0.80</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.90</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">]</span>
+    
+    <span class="c1"># Log mAP at each IoU threshold as separate points</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">iou</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">iou_thresholds</span><span class="p">):</span>
+        <span class="c1"># Create a pseudo x-axis using IoU as step value (multiply by 100 for better visualization)</span>
+        <span class="n">iou_step</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">iou</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Detailed/mAP_vs_IoU_Threshold&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">iou_step</span><span class="p">)</span>
+    
+    <span class="c1"># Log the standard IoU thresholds we already have</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Detailed/mAP_IoU_0.50&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_50&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="mi">50</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Detailed/mAP_IoU_0.75&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_75&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="mi">75</span><span class="p">)</span>
+    
+    <span class="c1"># ===== NEW: Compute and log Precision-Recall curves =====</span>
+    <span class="k">if</span> <span class="n">predictions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">targets</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Computing Precision-Recall curves...&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Compute PR curves for IoU=0.5</span>
+        <span class="n">pr_curves_50</span> <span class="o">=</span> <span class="n">compute_precision_recall_curve</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">targets</span><span class="p">,</span> <span class="n">iou_threshold</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">num_classes</span><span class="o">=</span><span class="n">num_classes</span><span class="p">)</span>
+        
+        <span class="c1"># Plot and log PR curves</span>
+        <span class="n">pr_plot</span> <span class="o">=</span> <span class="n">plot_precision_recall_curves</span><span class="p">(</span><span class="n">pr_curves_50</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_image</span><span class="p">(</span><span class="s1">&#39;Curves/Precision_Recall_IoU_0.5&#39;</span><span class="p">,</span> 
+                        <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pr_plot</span><span class="p">)</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> 
+                        <span class="n">global_step</span><span class="p">)</span>
+        
+        <span class="c1"># Log precision and recall values at different confidence thresholds for each class</span>
+        <span class="k">for</span> <span class="n">class_key</span><span class="p">,</span> <span class="n">pr_data</span> <span class="ow">in</span> <span class="n">pr_curves_50</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">class_id</span> <span class="o">=</span> <span class="n">class_key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            
+            <span class="c1"># Log precision vs confidence threshold</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">thresh</span><span class="p">,</span> <span class="n">prec</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;thresholds&#39;</span><span class="p">],</span> <span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;precision&#39;</span><span class="p">])):</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;PR_Details/Class_</span><span class="si">{</span><span class="n">class_id</span><span class="si">}</span><span class="s1">/Precision&#39;</span><span class="p">,</span> 
+                                <span class="n">prec</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">thresh</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+            
+            <span class="c1"># Log recall vs confidence threshold  </span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">thresh</span><span class="p">,</span> <span class="n">rec</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;thresholds&#39;</span><span class="p">],</span> <span class="n">pr_data</span><span class="p">[</span><span class="s1">&#39;recall&#39;</span><span class="p">])):</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;PR_Details/Class_</span><span class="si">{</span><span class="n">class_id</span><span class="si">}</span><span class="s1">/Recall&#39;</span><span class="p">,</span> 
+                                <span class="n">rec</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">thresh</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Precision-Recall curves logged!&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Object size-specific mAP</span>
+    <span class="k">if</span> <span class="s1">&#39;map_small&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_Small&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_small&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;map_medium&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_Medium&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_medium&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;map_large&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_Large&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_large&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    
+    <span class="c1"># MAR (Mean Average Recall) metrics</span>
+    <span class="k">if</span> <span class="s1">&#39;mar_1&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_1&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;mar_10&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_10&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_10&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;mar_100&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_100&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_100&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    
+    <span class="c1"># Object size-specific MAR</span>
+    <span class="k">if</span> <span class="s1">&#39;mar_small&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_Small&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_small&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;mar_medium&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_Medium&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_medium&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;mar_large&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_Large&#39;</span><span class="p">,</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_large&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    
+    <span class="c1"># Per-class metrics if available</span>
+    <span class="k">if</span> <span class="s1">&#39;map_per_class&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">per_class_map</span> <span class="o">=</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;map_per_class&#39;</span><span class="p">]</span>
+        <span class="c1"># Handle both scalar and tensor cases</span>
+        <span class="k">if</span> <span class="n">per_class_map</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># If it&#39;s a 1D+ tensor</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">class_map</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">per_class_map</span><span class="p">):</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Evaluation/mAP_Class_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">class_map</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># If it&#39;s a scalar (0-d tensor)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/mAP_PerClass_Avg&#39;</span><span class="p">,</span> <span class="n">per_class_map</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="s1">&#39;mar_100_per_class&#39;</span> <span class="ow">in</span> <span class="n">metrics</span><span class="p">:</span>
+        <span class="n">per_class_mar</span> <span class="o">=</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;mar_100_per_class&#39;</span><span class="p">]</span>
+        <span class="c1"># Handle both scalar and tensor cases</span>
+        <span class="k">if</span> <span class="n">per_class_mar</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># If it&#39;s a 1D+ tensor</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">class_mar</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">per_class_mar</span><span class="p">):</span>
+                <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Evaluation/MAR_Class_</span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">class_mar</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># If it&#39;s a scalar (0-d tensor)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;Evaluation/MAR_PerClass_Avg&#39;</span><span class="p">,</span> <span class="n">per_class_mar</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="n">global_step</span><span class="p">)</span>
+    
+    <span class="n">writer</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Metrics successfully logged to TensorBoard!&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../inference.mAPGenerator.html#inference.mAPGenerator.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Evaluate object detection model mAP on TEST set&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--model_path&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to .pth model file&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--config&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;config/config.yaml&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Path to config file&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--device&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;cuda&#39;</span><span class="p">,</span> <span class="s1">&#39;cpu&#39;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Device to use for evaluation&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--batch_size&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Batch size for evaluation&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--num_workers&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of dataloader workers&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--log_dir&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;runs/evaluation&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;TensorBoard log directory&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--run_name&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Custom run name for TensorBoard (default: timestamp)&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--use_val&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Use validation set instead of test set&#39;</span><span class="p">)</span>
+    
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    
+    <span class="c1"># Create run name with timestamp</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">run_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y%m</span><span class="si">%d</span><span class="s1">_%H%M%S&#39;</span><span class="p">)</span>
+        <span class="n">model_name</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_path</span><span class="p">)</span><span class="o">.</span><span class="n">stem</span>
+        <span class="n">split_name</span> <span class="o">=</span> <span class="s2">&quot;val&quot;</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">use_val</span> <span class="k">else</span> <span class="s2">&quot;test&quot;</span>
+        <span class="n">run_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">model_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">split_name</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">timestamp</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">run_name</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">run_name</span>
+    
+    <span class="c1"># Initialize TensorBoard writer</span>
+    <span class="n">log_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">log_dir</span><span class="p">)</span> <span class="o">/</span> <span class="n">run_name</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">SummaryWriter</span><span class="p">(</span><span class="n">log_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">log_path</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;TensorBoard logs will be saved to: </span><span class="si">{</span><span class="n">log_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;View with: tensorboard --logdir </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">log_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Load configuration</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Loading configuration from </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">load_config</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+    
+    <span class="c1"># Set device</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">device</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using device: </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Load test or validation dataset</span>
+    <span class="n">split_name</span> <span class="o">=</span> <span class="s2">&quot;validation&quot;</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">use_val</span> <span class="k">else</span> <span class="s2">&quot;test&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading </span><span class="si">{</span><span class="n">split_name</span><span class="si">}</span><span class="s2"> dataset...&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Handle both single-root and split train/val/test configurations</span>
+    <span class="n">data_cfg</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+    
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">use_val</span><span class="p">:</span>
+        <span class="c1"># Use validation set</span>
+        <span class="k">if</span> <span class="s1">&#39;val_root_dir&#39;</span> <span class="ow">in</span> <span class="n">data_cfg</span><span class="p">:</span>
+            <span class="n">test_root_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;val_root_dir&#39;</span><span class="p">])</span>
+            <span class="n">test_ann_file</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;val_annotation_file&#39;</span><span class="p">]</span>
+            <span class="n">test_images_root</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;val_images_root&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Legacy single-root configuration</span>
+            <span class="n">test_root_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;root_dir&#39;</span><span class="p">])</span>
+            <span class="n">test_ann_file</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;val_annotation_file&#39;</span><span class="p">,</span> <span class="s1">&#39;annotations.json&#39;</span><span class="p">)</span>
+            <span class="n">test_images_root</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;images_root&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Use test set (preferred for final evaluation)</span>
+        <span class="k">if</span> <span class="s1">&#39;test_root_dir&#39;</span> <span class="ow">in</span> <span class="n">data_cfg</span><span class="p">:</span>
+            <span class="n">test_root_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;test_root_dir&#39;</span><span class="p">])</span>
+            <span class="n">test_ann_file</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;test_annotation_file&#39;</span><span class="p">]</span>
+            <span class="n">test_images_root</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;test_images_root&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Fallback: try to use test folder in same structure</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[WARNING] No test_root_dir in config. Attempting to use val set...&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="s1">&#39;val_root_dir&#39;</span> <span class="ow">in</span> <span class="n">data_cfg</span><span class="p">:</span>
+                <span class="n">test_root_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;val_root_dir&#39;</span><span class="p">])</span>
+                <span class="n">test_ann_file</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="p">[</span><span class="s1">&#39;val_annotation_file&#39;</span><span class="p">]</span>
+                <span class="n">test_images_root</span> <span class="o">=</span> <span class="n">test_root_dir</span> <span class="o">/</span> <span class="n">data_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;val_images_root&#39;</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;No test or validation configuration found in config file. &quot;</span>
+                    <span class="s2">&quot;Please add test_root_dir, test_annotation_file, and test_images_root to config.yaml&quot;</span>
+                <span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Test root: </span><span class="si">{</span><span class="n">test_root_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Annotation file: </span><span class="si">{</span><span class="n">test_ann_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Images root: </span><span class="si">{</span><span class="n">test_images_root</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Verify paths exist</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">test_ann_file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Annotation file not found: </span><span class="si">{</span><span class="n">test_ann_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Import transforms</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">turbine_processing.transforms</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_val_transform</span>
+    
+    <span class="n">test_dataset</span> <span class="o">=</span> <span class="n">TurbineCocoDataset</span><span class="p">(</span>
+        <span class="n">images_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">test_images_root</span><span class="p">),</span>
+        <span class="n">ann_file</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">test_ann_file</span><span class="p">),</span>
+        <span class="n">transforms</span><span class="o">=</span><span class="n">get_val_transform</span><span class="p">()</span>  <span class="c1"># Convert to tensor, no augmentation</span>
+    <span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">split_name</span><span class="o">.</span><span class="n">capitalize</span><span class="p">()</span><span class="si">}</span><span class="s2"> dataset size: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">test_dataset</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Create test dataloader</span>
+    <span class="n">test_loader</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">test_dataset</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
+        <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">num_workers</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">num_workers</span><span class="p">,</span>
+        <span class="n">collate_fn</span><span class="o">=</span><span class="n">TurbineDataLoader</span><span class="o">.</span><span class="n">collate_fn</span><span class="p">,</span>
+        <span class="n">pin_memory</span><span class="o">=</span><span class="kc">True</span> <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="k">else</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Load model</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading model from </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">model_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">num_classes</span> <span class="o">=</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;num_object_classes&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># +1 for background</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">num_classes</span><span class="o">=</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">load_weights</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+    <span class="c1"># Load trained weights</span>
+    <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    
+    <span class="c1"># Handle different checkpoint formats</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s1">&#39;model_state_dict&#39;</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">[</span><span class="s1">&#39;model_state_dict&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="s1">&#39;state_dict&#39;</span> <span class="ow">in</span> <span class="n">checkpoint</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">[</span><span class="s1">&#39;state_dict&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">checkpoint</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Model loaded successfully!&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Log model path and configuration to TensorBoard</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_text</span><span class="p">(</span><span class="s1">&#39;Model/Path&#39;</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">model_path</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_text</span><span class="p">(</span><span class="s1">&#39;Model/Config&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_text</span><span class="p">(</span><span class="s1">&#39;Evaluation/Split&#39;</span><span class="p">,</span> <span class="n">split_name</span><span class="p">)</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_text</span><span class="p">(</span><span class="s1">&#39;Evaluation/Dataset_Size&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">test_dataset</span><span class="p">)))</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_text</span><span class="p">(</span><span class="s1">&#39;Evaluation/Batch_Size&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">batch_size</span><span class="p">))</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">add_text</span><span class="p">(</span><span class="s1">&#39;Evaluation/Device&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    
+    <span class="c1"># Evaluate model</span>
+    <span class="n">metrics</span><span class="p">,</span> <span class="n">all_predictions</span><span class="p">,</span> <span class="n">all_targets</span> <span class="o">=</span> <span class="n">evaluate_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">test_loader</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    
+    <span class="c1"># Print results to console</span>
+    <span class="n">print_metrics</span><span class="p">(</span><span class="n">metrics</span><span class="p">)</span>
+    
+    <span class="c1"># Log metrics to TensorBoard (now with PR curves)</span>
+    <span class="n">log_metrics_to_tensorboard</span><span class="p">(</span>
+        <span class="n">metrics</span><span class="p">,</span> 
+        <span class="n">writer</span><span class="p">,</span> 
+        <span class="n">predictions</span><span class="o">=</span><span class="n">all_predictions</span><span class="p">,</span>
+        <span class="n">targets</span><span class="o">=</span><span class="n">all_targets</span><span class="p">,</span>
+        <span class="n">num_classes</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;num_object_classes&#39;</span><span class="p">],</span>
+        <span class="n">global_step</span><span class="o">=</span><span class="mi">0</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Save metrics to YAML file</span>
+    <span class="n">output_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_path</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="sa">f</span><span class="s1">&#39;evaluation_metrics_</span><span class="si">{</span><span class="n">run_name</span><span class="si">}</span><span class="s1">.yaml&#39;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">metrics</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span> <span class="n">f</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Metrics saved to </span><span class="si">{</span><span class="n">output_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Close TensorBoard writer</span>
+    <span class="n">writer</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Evaluation complete! View results in TensorBoard:&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  tensorboard --logdir </span><span class="si">{</span><span class="n">args</span><span class="o">.</span><span class="n">log_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Harish, Dayesh.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

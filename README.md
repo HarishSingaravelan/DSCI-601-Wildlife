@@ -23,6 +23,10 @@ The codebase is organized into logical directories following the separation of c
 | **Root** | Main entry point for running the pipeline. | `main.py` | — |
 ---
 
+📚 Documentation
+Comprehensive API documentation is available via Sphinx:
+Local Documentation: Open doc\_build\html\index.html in your browser for complete API reference and module documentation.
+
 ## 🧪 Core Components
 
 ### Main Entry Point (main.py)
@@ -36,6 +40,20 @@ main.py is the orchestration script responsible for setting up and executing the
 | **Real-Time Logging** | Creates a TensorBoard `SummaryWriter` in `runs/` with timestamped folders for monitoring |
 | **Training Loop** | Executes epoch iterations, calling `trainer.train_one_epoch()` for training and `trainer.validate_metrics()` for evaluating validation mAP metrics. |
 
+
+## 📊 Datasets and Annotation
+
+This project utilizes a large, proprietary dataset for wildlife detection. For demonstration and testing purposes, this repository contains a small sample of that data.
+
+### 1. Raw Image Dataset (The Source Data)
+
+| Detail | Description |
+|--------|-------------|
+| **Full Dataset Size** | ~500 GB (not publicly hosted or downloadable). |
+| **Sample Location** | `Sample_images/` |
+| **Sample Content** | This folder contains 10 sample images and their original annotations, used strictly for demonstrating the functionality of the data pipeline and ensuring the PyTorch data loaders can initialize correctly. |
+| **Download** | **Note:** The full 500 GB dataset is cannot be downloaded. Users must supply their own annotated image collection to perform full model training. |
+| **Purpose** | The small sample set ensures that all scripts (`coco_dataset_generator.py`, `main.py`, etc.) are runnable immediately after cloning the repository. |
 
 ## ⚙️ Setup and Installation
 

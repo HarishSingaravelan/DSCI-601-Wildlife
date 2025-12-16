@@ -141,3 +141,5 @@ runs/
 # coco annotations
 /*.json
 turbine_split/
+
+*.ps1

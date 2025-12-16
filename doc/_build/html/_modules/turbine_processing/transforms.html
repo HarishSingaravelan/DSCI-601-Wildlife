@@ -1,0 +1,258 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>turbine_processing.transforms &mdash; DSCI-601-WILDLIFE 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            DSCI-601-WILDLIFE
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">data package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../modeling.html">modeling package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../turbine_processing.html">turbine_processing package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../inference.html">inference package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DSCI-601-WILDLIFE</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">turbine_processing.transforms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for turbine_processing.transforms</h1><div class="highlight"><pre>
+<span></span><span class="c1"># processing/transforms.py</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">albumentations</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">A</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">albumentations.pytorch</span><span class="w"> </span><span class="kn">import</span> <span class="n">ToTensorV2</span>
+
+
+<div class="viewcode-block" id="AlbumentationsDetectionTransform">
+<a class="viewcode-back" href="../../turbine_processing.transforms.html#turbine_processing.transforms.AlbumentationsDetectionTransform">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">AlbumentationsDetectionTransform</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Adapter to use an Albumentations Compose with our detection dataset.</span>
+<span class="sd">    ... (omitting __init__ and __call__ for brevity as they are unchanged)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">augment</span><span class="p">:</span> <span class="n">A</span><span class="o">.</span><span class="n">Compose</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">augment</span> <span class="o">=</span> <span class="n">augment</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+        <span class="c1"># Convert PIL -&gt; numpy</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">image_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">image_np</span> <span class="o">=</span> <span class="n">image</span>
+
+        <span class="c1"># Prepare boxes/labels</span>
+        <span class="n">boxes</span> <span class="o">=</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;boxes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="c1"># Run Albumentations</span>
+        <span class="n">transformed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">augment</span><span class="p">(</span>
+            <span class="n">image</span><span class="o">=</span><span class="n">image_np</span><span class="p">,</span>
+            <span class="n">bboxes</span><span class="o">=</span><span class="n">boxes</span><span class="p">,</span>
+            <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Get transformed image</span>
+        <span class="n">out_img</span> <span class="o">=</span> <span class="n">transformed</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+
+        <span class="c1"># --- Ensure float32 tensor in [0,1] ---</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">out_img</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+            <span class="n">out_img</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">out_img</span><span class="p">)</span>
+
+        <span class="c1"># If tensor is uint8 → convert to float32</span>
+        <span class="k">if</span> <span class="n">out_img</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
+            <span class="n">out_img</span> <span class="o">=</span> <span class="n">out_img</span><span class="o">.</span><span class="n">float</span><span class="p">()</span> <span class="o">/</span> <span class="mf">255.0</span>
+
+        
+        <span class="k">if</span> <span class="n">out_img</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">out_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">out_img</span> <span class="o">=</span> <span class="n">out_img</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># HWC → CHW</span>
+
+        <span class="c1"># --- Rebuild boxes back to tensors ---</span>
+        <span class="n">new_boxes</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">transformed</span><span class="p">[</span><span class="s2">&quot;bboxes&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="n">new_labels</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">transformed</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">new_boxes</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_boxes</span> <span class="o">=</span> <span class="n">new_boxes</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+            <span class="n">new_labels</span> <span class="o">=</span> <span class="n">new_labels</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">areas</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">wh</span> <span class="o">=</span> <span class="n">new_boxes</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">-</span> <span class="n">new_boxes</span><span class="p">[:,</span> <span class="p">:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">areas</span> <span class="o">=</span> <span class="n">wh</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">wh</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">target</span><span class="p">[</span><span class="s2">&quot;boxes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_boxes</span>
+        <span class="n">target</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_labels</span>
+        <span class="n">target</span><span class="p">[</span><span class="s2">&quot;area&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">areas</span>
+
+        <span class="k">return</span> <span class="n">out_img</span><span class="p">,</span> <span class="n">target</span></div>
+
+
+
+<div class="viewcode-block" id="get_train_transform">
+<a class="viewcode-back" href="../../turbine_processing.transforms.html#turbine_processing.transforms.get_train_transform">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_train_transform</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AlbumentationsDetectionTransform</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Training transform with added Perspective, Coarse Dropout, Shift Scale Rotate, </span>
+<span class="sd">    and Random Crop.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">train_tf</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">Compose</span><span class="p">([</span>
+        <span class="c1"># --- Geometric/Position Augmentations ---</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">HorizontalFlip</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">),</span> <span class="c1"># Standard flip</span>
+        
+        <span class="c1"># Shift Scale Rotate: good for simulating viewpoint changes</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">ShiftScaleRotate</span><span class="p">(</span>
+            <span class="n">shift_limit</span><span class="o">=</span><span class="mf">0.0625</span><span class="p">,</span>  <span class="c1"># Max fractional shift</span>
+            <span class="n">scale_limit</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>     <span class="c1"># Max fractional scale</span>
+            <span class="n">rotate_limit</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span>     <span class="c1"># Max rotation angle</span>
+            <span class="n">p</span><span class="o">=</span><span class="mf">0.5</span>
+        <span class="p">),</span>
+        
+        <span class="c1"># Perspective: adds complex distortion, needs careful use</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">Perspective</span><span class="p">(</span>
+            <span class="n">scale</span><span class="o">=</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">),</span> <span class="c1"># Controls distortion strength</span>
+            <span class="n">p</span><span class="o">=</span><span class="mf">0.25</span> <span class="c1"># Lower probability to keep bounding boxes valid</span>
+        <span class="p">),</span>
+        
+        <span class="c1"># Random Crop: drastically changes context and object visibility</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">RandomSizedBBoxSafeCrop</span><span class="p">(</span>
+            <span class="n">width</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">512</span><span class="p">,</span> <span class="c1"># Target size</span>
+            <span class="n">p</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> <span class="c1"># Moderate probability</span>
+            <span class="c1"># The crop area must include all bounding boxes after transformation</span>
+            
+        <span class="p">),</span> 
+
+        <span class="c1"># --- Color/Pixel Augmentations ---</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">RandomBrightnessContrast</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.2</span><span class="p">),</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">ColorJitter</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">0.2</span><span class="p">),</span>
+        
+        <span class="c1"># --- Structural Augmentations ---</span>
+        <span class="c1"># Coarse Dropout (Cutout): helps the model learn based on parts, not wholes</span>
+        <span class="n">A</span><span class="o">.</span><span class="n">CoarseDropout</span><span class="p">(</span>
+            <span class="n">max_holes</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">max_height</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">max_width</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="c1"># Max number and size of holes</span>
+            <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="c1"># Black patches</span>
+            <span class="n">p</span><span class="o">=</span><span class="mf">0.2</span>
+        <span class="p">),</span>
+
+        <span class="c1"># --- Final step for PyTorch compatibility ---</span>
+        <span class="n">ToTensorV2</span><span class="p">()</span>
+    <span class="p">],</span> <span class="n">bbox_params</span><span class="o">=</span><span class="n">A</span><span class="o">.</span><span class="n">BboxParams</span><span class="p">(</span>
+        <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;pascal_voc&quot;</span><span class="p">,</span> 
+        <span class="n">label_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">],</span>
+        <span class="c1"># Drop boxes that fall out of bounds or become too small after geometric transforms</span>
+        <span class="n">min_area</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> 
+        <span class="n">min_visibility</span><span class="o">=</span><span class="mf">0.1</span> <span class="c1"># Minimum portion of the box visible after crop/transforms</span>
+    <span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">AlbumentationsDetectionTransform</span><span class="p">(</span><span class="n">train_tf</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="get_val_transform">
+<a class="viewcode-back" href="../../turbine_processing.transforms.html#turbine_processing.transforms.get_val_transform">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_val_transform</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">AlbumentationsDetectionTransform</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Validation transform - tensor conversions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">val_tf</span> <span class="o">=</span> <span class="n">A</span><span class="o">.</span><span class="n">Compose</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="n">ToTensorV2</span><span class="p">(),</span>
+        <span class="p">],</span>
+        <span class="n">bbox_params</span><span class="o">=</span><span class="n">A</span><span class="o">.</span><span class="n">BboxParams</span><span class="p">(</span>
+            <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;pascal_voc&quot;</span><span class="p">,</span>
+            <span class="n">label_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">],</span>
+            <span class="n">min_visibility</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">AlbumentationsDetectionTransform</span><span class="p">(</span><span class="n">val_tf</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Harish, Dayesh.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,11 +1,19 @@
+"""
+.. module:: coco_dataset_generator
+   :synopsis: Generates COCO-style JSON annotations from custom JSON and Pascal VOC XML formats.
+.. moduleauthor:: AI Assistant
+
+This script iterates through a directory tree, finds image files, and parses corresponding 
+custom JSON or Pascal VOC XML annotation files to build a single COCO-compliant JSON file. 
+It handles robust category mapping and provides a detailed summary of processed and skipped files.
+"""
 import os
 import json
 import xml.etree.ElementTree as ET
 from PIL import Image
 from typing import Optional, List, Tuple, Dict
-# Removed tqdm for cleaner HPC logging
 
-# --- Configuration ---
+# --- Configuration (Global Constants) ---
 ROOT_DIR = "Sample_images"
 OUTPUT_JSON = "coco_annotations.json"
 
@@ -37,22 +45,28 @@ COCO_CATEGORIES = [
     for cname, cid in CATEGORY_MAPPING.items()
 ]
 
-# Get the ID for 'trash' for fallback assignment
 TRASH_CATEGORY_ID = CATEGORY_MAPPING.get("trash", 5) 
 
-# --- Helper Functions ---
-
-# Create a mapping for robust, case-insensitive lookups
+# --- Helper Maps ---
 ROBUST_CATEGORY_MAP = {name.lower().strip(): cid for name, cid in CATEGORY_MAPPING.items()}
 ROBUST_CATEGORY_NAMES = {name.lower().strip(): name for name in CATEGORY_MAPPING.keys()}
 
-# Global counter for reporting
+# Global counters for reporting
 global_reassigned_count = 0
 global_skipped_count = 0
 
 
+# --- Helper Functions ---
+
 def get_image_dimensions(image_path: str) -> Optional[Tuple[int, int]]:
-    """Reads image dimensions safely."""
+    """
+    Reads image dimensions safely using the PIL library.
+
+    :param image_path: Path to the image file.
+    :type image_path: str
+    :returns: A tuple containing (width, height) in pixels, or None if the file is invalid.
+    :rtype: Optional[Tuple[int, int]]
+    """
     try:
         with Image.open(image_path) as img:
             return img.width, img.height
@@ -61,8 +75,14 @@ def get_image_dimensions(image_path: str) -> Optional[Tuple[int, int]]:
 
 def get_category_id_robust(raw_cname: str) -> int:
     """
-    Looks up category ID robustly. If not found, returns TRASH_CATEGORY_ID (5).
-    Updates the global reassignment counter if a fallback occurs.
+    Looks up category ID robustly using a case-insensitive, stripped key.
+    If the category name is not found, the annotation is assigned to the 
+    'trash' category (TRASH_CATEGORY_ID) and the global reassignment counter is updated.
+
+    :param raw_cname: The raw category name extracted from the annotation file.
+    :type raw_cname: str
+    :returns: The integer category ID (e.g., 1, 2, 5).
+    :rtype: int
     """
     global global_reassigned_count
     
@@ -79,25 +99,46 @@ def get_category_id_robust(raw_cname: str) -> int:
         return TRASH_CATEGORY_ID
 
 
-def parse_custom_json(json_path, image_id, image_width, image_height, ann_id):
+def parse_custom_json(
+    json_path: str, 
+    image_id: int, 
+    image_width: int, 
+    image_height: int, 
+    ann_id: int
+) -> Tuple[List[Dict], int]:
+    """
+    Parses custom JSON annotation format (assuming normalized coordinates [0, 1]).
+
+    :param json_path: Path to the custom JSON annotation file.
+    :type json_path: str
+    :param image_id: The COCO ID of the image currently being processed.
+    :type image_id: int
+    :param image_width: Image width in pixels, used for coordinate conversion.
+    :type image_width: int
+    :param image_height: Image height in pixels, used for coordinate conversion.
+    :type image_height: int
+    :param ann_id: The starting annotation ID counter.
+    :type ann_id: int
+    :returns: A tuple containing the list of new COCO annotations and the updated annotation ID.
+    :rtype: Tuple[List[Dict], int]
+    """
     annotations = []
     try:
         with open(json_path, 'r') as f:
             data = json.load(f)
-    except:
+    except Exception:
         return annotations, ann_id
 
     for carcass in data.get('carcasses', []):
         raw_cname = carcass.get('class')
-        cid = get_category_id_robust(raw_cname) # Use the robust resolver
+        cid = get_category_id_robust(raw_cname)
         
-        loc = carcass.get('location', [])
-
-        if len(loc) < 2:
+        # Check for required location data
+        if not carcass.get('location') or len(carcass['location']) < 2:
             continue
 
         try:
-            # Assuming loc contains normalized coordinates (0 to 1) for two corners
+            # Extract normalized coordinates (nx1, ny1, nx2, ny2)
             nx1, ny1 = float(carcass['location'][0]['x']), float(carcass['location'][0]['y'])
             nx2, ny2 = float(carcass['location'][1]['x']), float(carcass['location'][1]['y'])
         except (ValueError, KeyError, IndexError):
@@ -112,7 +153,7 @@ def parse_custom_json(json_path, image_id, image_width, image_height, ann_id):
         w = max(0, xmax - xmin)
         h = max(0, ymax - ymin)
 
-        if w == 0 or h == 0:
+        if w <= 0 or h <= 0:
             continue
 
         annotations.append({
@@ -128,21 +169,38 @@ def parse_custom_json(json_path, image_id, image_width, image_height, ann_id):
 
     return annotations, ann_id
 
-def parse_pascal_voc_xml(xml_path, image_id, ann_id):
+def parse_pascal_voc_xml(
+    xml_path: str, 
+    image_id: int, 
+    ann_id: int
+) -> Tuple[List[Dict], int]:
+    """
+    Parses Pascal VOC XML annotation format (assuming absolute pixel coordinates).
+
+    :param xml_path: Path to the Pascal VOC XML file.
+    :type xml_path: str
+    :param image_id: The COCO ID of the image currently being processed.
+    :type image_id: int
+    :param ann_id: The starting annotation ID counter.
+    :type ann_id: int
+    :returns: A tuple containing the list of new COCO annotations and the updated annotation ID.
+    :rtype: Tuple[List[Dict], int]
+    """
     annotations = []
     try:
         tree = ET.parse(xml_path)
         root = tree.getroot()
-    except:
+    except Exception:
         return annotations, ann_id
 
     for obj in root.findall('object'):
         raw_cname = obj.find('name').text
-        cid = get_category_id_robust(raw_cname) # Use the robust resolver
+        cid = get_category_id_robust(raw_cname)
         
         b = obj.find('bndbox')
         
         try:
+            # Pascal VOC uses absolute pixel coordinates (x,y max/min)
             xmin = int(float(b.find('xmin').text))
             ymin = int(float(b.find('ymin').text))
             xmax = int(float(b.find('xmax').text))
@@ -153,7 +211,7 @@ def parse_pascal_voc_xml(xml_path, image_id, ann_id):
         w = max(0, xmax - xmin)
         h = max(0, ymax - ymin)
 
-        if w <= 0 or h <= 0: # Check for non-positive dimensions
+        if w <= 0 or h <= 0:
             continue
 
         annotations.append({
@@ -171,7 +229,16 @@ def parse_pascal_voc_xml(xml_path, image_id, ann_id):
 
 
 def generate_coco_json(root_dir: str, output_path: str):
+    """
+    Main function to scan the directory tree, parse annotations, and save the COCO JSON file.
+
+    :param root_dir: The root directory containing the images and their annotations.
+    :type root_dir: str
+    :param output_path: The path where the final COCO JSON file will be saved.
+    :type output_path: str
+    """
     global global_skipped_count
+    global global_reassigned_count
     
     coco = {
         "info": COCO_INFO,
@@ -193,11 +260,7 @@ def generate_coco_json(root_dir: str, output_path: str):
     total_found_files = len(all_files)
     skipped_images = []
     
-    # CRITICAL WARNING FIX: The number of images found in the directory listing (762)
-    # differs from the user's expected total (807). We print a warning.
     print(f"Found {total_found_files} potential image files. Starting processing...")
-    if total_found_files != 807:
-        print(f"WARNING: Image count discrepancy detected. Found {total_found_files} but expected 807. Analyzing skipped files...")
 
     image_id = 1
     ann_id = 1
@@ -206,7 +269,6 @@ def generate_coco_json(root_dir: str, output_path: str):
     # MAIN IMAGE LOOP
     for img_path in all_files:
         rel_path = os.path.relpath(img_path, root_dir)
-        # Use simple os.path.join for file_name and ensure forward slashes
         file_name = os.path.join(root_name, rel_path).replace(os.path.sep, "/")
 
         dims = get_image_dimensions(img_path)
@@ -229,18 +291,15 @@ def generate_coco_json(root_dir: str, output_path: str):
         base, _ = os.path.splitext(os.path.basename(img_path))
         folder = os.path.dirname(img_path)
 
-        # FIX: Check all annotation extensions and aggregate annotations.
+        # Process available annotation files for the current image
         for ext in ANNOTATION_EXTENSIONS:
             ann_path = os.path.join(folder, base + ext)
             if os.path.exists(ann_path):
+                new_anns = []
                 if ext == ".json":
-                    # Custom JSON parsing requires w, h for normalized coordinate conversion
                     new_anns, ann_id = parse_custom_json(ann_path, image_id, w, h, ann_id) 
                 elif ext == ".xml":
-                    # Pascal VOC parsing uses pixel coords, so no w, h needed in arguments
                     new_anns, ann_id = parse_pascal_voc_xml(ann_path, image_id, ann_id) 
-                else:
-                    new_anns = [] 
 
                 coco["annotations"].extend(new_anns)
                 
@@ -248,14 +307,13 @@ def generate_coco_json(root_dir: str, output_path: str):
 
     # --- Final Summary ---
     print("\n--- Summary ---")
-    print(f"Total image files found (Initial Scan): {total_found_files}")
     print(f"Total images successfully processed: {len(coco['images'])}")
     print(f"Total annotations collected: {len(coco['annotations'])}")
     print(f"Total annotations re-assigned to 'trash' (ID {TRASH_CATEGORY_ID}): {global_reassigned_count}")
     
     if skipped_images:
         print(f"\nCRITICAL WARNING: Skipped {len(skipped_images)} images due to reading/dimension errors or corruption.")
-        print(f"This accounts for the missing count. Examples: {skipped_images[:5]}")
+        print(f"Examples: {skipped_images[:5]}")
     
     # Save the final COCO JSON file
     try:

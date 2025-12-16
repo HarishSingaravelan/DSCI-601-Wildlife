@@ -19,3 +19,4 @@ documentation for details.
    modeling
    turbine_processing
    inference
+   Tests

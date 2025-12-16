@@ -23,9 +23,9 @@ The codebase is organized into logical directories following the separation of c
 | **Root** | Main entry point for running the pipeline. | `main.py` | — |
 ---
 
-📚 Documentation
-Comprehensive API documentation is available via Sphinx:
-Local Documentation: Open doc\_build\html\index.html in your browser for complete API reference and module documentation.
+**📚 Documentation**
+**Comprehensive API documentation is available via Sphinx:
+Local Documentation: Open `doc\_build\html\index.html` in your browser for complete API reference and module documentation.**
 
 ## 🧪 Core Components
 

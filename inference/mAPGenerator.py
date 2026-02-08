@@ -1,560 +1,418 @@
 """
-mAP Evaluation Script for Object Detection Models
-Evaluates a trained .pth model on test dataset and computes mAP metrics.
-Saves results to TensorBoard for visualization.
+mAP Evaluation Script for Object Detection Models (Faster R-CNN + Custom DETRBaseline)
+
+- Evaluates a trained .pth model on test/val dataset
+- Computes COCO-style mAP using TorchMetrics MeanAveragePrecision
+- Maps DETR contiguous labels (0..K-1) -> COCO category IDs using contig2cat
+- Supports Faster R-CNN outputs (already COCO category IDs)
+- Saves PR curve to pr_curve.png
+
+Usage:
+  python inference/mAPGenerator.py --model_path PATH_TO_PTH --config config/config.yaml --batch_size 1
 """
 
 from __future__ import annotations
+
 import argparse
+import io
+import sys
+from pathlib import Path
+
+import yaml
 import torch
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 from torchmetrics.detection import MeanAveragePrecision
-from tqdm import tqdm
-import yaml
-from pathlib import Path
-from datetime import datetime
-
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+from tqdm.auto import tqdm
 
 import numpy as np
 import matplotlib.pyplot as plt
-import io
 from PIL import Image as PILImage
 
-# Import your custom modules
+# -----------------------------
+# Add repo root to sys.path
+# -----------------------------
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
 from turbine_processing.dataset import TurbineCocoDataset
 from turbine_processing.dataloader import TurbineDataLoader
+from turbine_processing.transforms import get_val_transform
 from modeling.model import get_model
 
 
-def load_config(config_path: str) -> dict:
-    """Load configuration from YAML file."""
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    return config
+# -----------------------------
+# Config utils
+# -----------------------------
+def load_config(path: str) -> dict:
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
 
 
-def evaluate_model(
-    model: torch.nn.Module,
-    test_loader: DataLoader,
+def build_label_maps(dataset: TurbineCocoDataset):
+    """
+    Build mapping between COCO category_id space and DETR contiguous space.
+
+    dataset targets use COCO category ids (e.g., 1..5).
+    DETRBaseline uses contiguous ids (0..K-1).
+    """
+    cat_ids = sorted(dataset.coco.getCatIds())
+    cat2contig = {cid: i for i, cid in enumerate(cat_ids)}
+    contig2cat = {i: cid for cid, i in cat2contig.items()}
+    return cat2contig, contig2cat
+
+
+# -----------------------------
+# Label mapping helpers
+# -----------------------------
+def map_predictions(
+    preds: list[dict],
+    model_name: str,
+    contig2cat: dict[int, int],
     device: torch.device,
-) -> tuple[dict, list, list]:
+    score_thresh: float | None = None,
+):
     """
-    Evaluate model and compute mAP metrics with detailed predictions.
-    
-    Args:
-        model: PyTorch model
-        test_loader: Test DataLoader
-        device: Device to run evaluation on
-        
-    Returns:
-        Tuple of (metrics dict, all_predictions list, all_targets list)
+    Convert model predictions into TorchMetrics format (labels in COCO category id space).
+
+    - FasterRCNN: already COCO category ids -> pass through
+    - DETRBaseline: labels are contiguous 0..K-1 -> map to COCO ids via contig2cat
+
+    score_thresh: if provided, filter out predictions below this score.
     """
-    model.eval()
-    model.to(device)
-    
-    # Initialize metrics calculator
-    metric_calculator = MeanAveragePrecision(box_format="xyxy").to(device)
-    
-    # Store all predictions and targets for detailed analysis
-    all_predictions = []
-    all_targets = []
-    
-    print("Starting evaluation...")
-    with torch.no_grad():
-        for images, targets in tqdm(test_loader, desc="Evaluating"):
-            # Move data to device
-            images = [img.to(device) for img in images]
-            targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
-            
-            # Get predictions
-            predictions = model(images)
-            
-            # Store for detailed analysis
-            all_predictions.extend(predictions)
-            all_targets.extend(targets)
-            
-            # Update metrics
-            metric_calculator.update(predictions, targets)
-    
-    # Compute final metrics
-    metrics = metric_calculator.compute()
-    
-    return metrics, all_predictions, all_targets
+    model_name = model_name.lower().strip()
+    mapped = []
 
+    for p in preds:
+        boxes = p["boxes"]
+        scores = p["scores"]
+        labels = p["labels"]
 
-def print_metrics(metrics: dict) -> None:
-    """Print metrics in a formatted way."""
-    print("\n" + "="*50)
-    print("mAP EVALUATION RESULTS")
-    print("="*50)
-    
-    metric_names = {
-        'map': 'mAP (IoU=0.50:0.95)',
-        'map_50': 'mAP @ IoU=0.50',
-        'map_75': 'mAP @ IoU=0.75',
-        'map_small': 'mAP (small objects)',
-        'map_medium': 'mAP (medium objects)',
-        'map_large': 'mAP (large objects)',
-        'mar_1': 'MAR (max 1 detection)',
-        'mar_10': 'MAR (max 10 detections)',
-        'mar_100': 'MAR (max 100 detections)',
-        'mar_small': 'MAR (small objects)',
-        'mar_medium': 'MAR (medium objects)',
-        'mar_large': 'MAR (large objects)',
-    }
-    
-    for key, name in metric_names.items():
-        if key in metrics:
-            value = metrics[key].item()
-            print(f"{name:30s}: {value:.4f}")
-    
-    print("="*50 + "\n")
+        # Ensure tensor types
+        if not torch.is_tensor(boxes):
+            boxes = torch.as_tensor(boxes)
+        if not torch.is_tensor(scores):
+            scores = torch.as_tensor(scores)
+        if not torch.is_tensor(labels):
+            labels = torch.as_tensor(labels)
 
-
-def compute_precision_recall_curve(
-    predictions: list,
-    targets: list,
-    iou_threshold: float = 0.5,
-    num_classes: int = 5
-) -> dict:
-    """
-    Compute Precision-Recall curve for each class at a given IoU threshold.
-    
-    Args:
-        predictions: List of prediction dictionaries
-        targets: List of target dictionaries
-        iou_threshold: IoU threshold for matching (default: 0.5)
-        num_classes: Number of classes (excluding background)
-        
-    Returns:
-        Dictionary with precision, recall arrays for each class
-    """
-    pr_curves = {}
-    
-    for class_id in range(1, num_classes + 1):  # Skip background (class 0)
-        # Collect all predictions and ground truths for this class
-        class_predictions = []
-        class_targets = []
-        
-        for pred, target in zip(predictions, targets):
-            # Filter predictions for this class
-            if 'labels' in pred and len(pred['labels']) > 0:
-                class_mask = pred['labels'] == class_id
-                if class_mask.any():
-                    class_predictions.append({
-                        'boxes': pred['boxes'][class_mask].cpu(),
-                        'scores': pred['scores'][class_mask].cpu(),
-                    })
-                else:
-                    class_predictions.append({'boxes': torch.empty((0, 4)), 'scores': torch.empty(0)})
+        if model_name == "detr":
+            # IMPORTANT: Custom DETRBaseline outputs labels in contiguous space 0..K-1.
+            # Do NOT do labels>0 filtering and do NOT subtract 1.
+            if labels.numel() > 0:
+                labels_cpu = labels.detach().cpu().tolist()
+                labels = torch.tensor(
+                    [contig2cat[int(l)] for l in labels_cpu],
+                    dtype=torch.int64,
+                    device=device,
+                )
             else:
-                class_predictions.append({'boxes': torch.empty((0, 4)), 'scores': torch.empty(0)})
-            
-            # Filter targets for this class
-            if 'labels' in target and len(target['labels']) > 0:
-                target_mask = target['labels'] == class_id
-                class_targets.append({
-                    'boxes': target['boxes'][target_mask].cpu(),
-                })
-            else:
-                class_targets.append({'boxes': torch.empty((0, 4))})
-        
-        # Compute precision-recall at different confidence thresholds
-        precisions = []
-        recalls = []
-        confidence_thresholds = np.linspace(0, 1, 101)  # 0.00, 0.01, ..., 1.00
-        
-        total_gt = sum(len(t['boxes']) for t in class_targets)
-        
-        if total_gt == 0:
-            pr_curves[f'class_{class_id}'] = {
-                'precision': np.zeros(len(confidence_thresholds)),
-                'recall': np.zeros(len(confidence_thresholds)),
-                'thresholds': confidence_thresholds
+                labels = labels.to(device)
+
+        else:
+            # Faster R-CNN: labels already in COCO space
+            labels = labels.to(device).to(torch.int64)
+
+        boxes = boxes.to(device)
+        scores = scores.to(device)
+
+        # Optional score threshold filtering
+        if score_thresh is not None:
+            keep = scores >= float(score_thresh)
+            boxes = boxes[keep]
+            scores = scores[keep]
+            labels = labels[keep]
+
+        mapped.append({"boxes": boxes, "scores": scores, "labels": labels})
+
+    return mapped
+
+
+def map_targets(targets: list[dict], device: torch.device):
+    """
+    Convert dataset targets to TorchMetrics expected format.
+    Targets are already in COCO category space.
+    """
+    mapped = []
+    for t in targets:
+        mapped.append(
+            {
+                "boxes": t["boxes"].to(device),
+                "labels": t["labels"].to(device).to(torch.int64),
             }
+        )
+    return mapped
+
+
+# -----------------------------
+# Precision–Recall curves
+# -----------------------------
+def compute_pr_curves(preds: list[dict], targets: list[dict], iou_thr: float = 0.5):
+    """
+    Compute PR curves per class (COCO category id space).
+    Simple greedy matching at a fixed IoU threshold.
+    """
+    from torchvision.ops import box_iou
+
+    class_ids = sorted({int(l) for t in targets for l in t["labels"].tolist()})
+    curves = {}
+
+    for cid in class_ids:
+        thresholds = np.linspace(0, 1, 101)
+        tp = np.zeros_like(thresholds)
+        fp = np.zeros_like(thresholds)
+
+        gt_total = sum((t["labels"] == cid).sum().item() for t in targets)
+        if gt_total == 0:
             continue
-        
-        for conf_thresh in confidence_thresholds:
-            tp = 0
-            fp = 0
-            
-            for pred, target in zip(class_predictions, class_targets):
-                # Filter by confidence threshold
-                conf_mask = pred['scores'] >= conf_thresh
-                pred_boxes = pred['boxes'][conf_mask]
-                target_boxes = target['boxes']
-                
-                if len(pred_boxes) == 0:
+
+        for i, thr in enumerate(thresholds):
+            for p, t in zip(preds, targets):
+                p_mask = (p["labels"] == cid) & (p["scores"] >= thr)
+                pb = p["boxes"][p_mask]
+                tb = t["boxes"][t["labels"] == cid]
+
+                if len(pb) == 0:
                     continue
-                
-                if len(target_boxes) == 0:
-                    fp += len(pred_boxes)
+                if len(tb) == 0:
+                    fp[i] += len(pb)
                     continue
-                
-                # Compute IoU between all pred and target boxes
-                from torchvision.ops import box_iou
-                ious = box_iou(pred_boxes, target_boxes)
-                
-                # Match predictions to targets (greedy matching)
-                matched_targets = set()
-                for i in range(len(pred_boxes)):
-                    if len(target_boxes) == 0:
-                        fp += 1
-                        continue
-                    
-                    max_iou, max_idx = ious[i].max(), ious[i].argmax()
-                    
-                    if max_iou >= iou_threshold and max_idx.item() not in matched_targets:
-                        tp += 1
-                        matched_targets.add(max_idx.item())
+
+                ious = box_iou(pb, tb)
+                matched = set()
+
+                for r in range(len(pb)):
+                    m, idx = ious[r].max(0)
+                    if float(m) >= iou_thr and int(idx) not in matched:
+                        tp[i] += 1
+                        matched.add(int(idx))
                     else:
-                        fp += 1
-            
-            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-            recall = tp / total_gt if total_gt > 0 else 0
-            
-            precisions.append(precision)
-            recalls.append(recall)
-        
-        pr_curves[f'class_{class_id}'] = {
-            'precision': np.array(precisions),
-            'recall': np.array(recalls),
-            'thresholds': confidence_thresholds
-        }
-    
-    return pr_curves
+                        fp[i] += 1
+
+        precision = tp / np.maximum(tp + fp, 1)
+        recall = tp / gt_total
+
+        curves[f"class_{cid}"] = {"precision": precision, "recall": recall}
+
+    return curves
 
 
-def plot_precision_recall_curves(pr_curves: dict, class_names: list = None) -> PILImage.Image:
-    """
-    Plot Precision-Recall curves for all classes.
-    
-    Args:
-        pr_curves: Dictionary with PR data for each class
-        class_names: List of class names (optional)
-        
-    Returns:
-        PIL Image of the plot
-    """
-    fig, ax = plt.subplots(figsize=(10, 8))
-    
-    for class_key, pr_data in pr_curves.items():
-        class_id = int(class_key.split('_')[1])
-        label = class_names[class_id - 1] if class_names and len(class_names) >= class_id else f'Class {class_id}'
-        
-        # Sort by recall for proper curve plotting
-        sorted_indices = np.argsort(pr_data['recall'])
-        recall = pr_data['recall'][sorted_indices]
-        precision = pr_data['precision'][sorted_indices]
-        
-        ax.plot(recall, precision, linewidth=2, label=label)
-    
-    ax.set_xlabel('Recall', fontsize=12)
-    ax.set_ylabel('Precision', fontsize=12)
-    ax.set_title('Precision-Recall Curves (IoU=0.5)', fontsize=14)
-    ax.legend(loc='best')
+def plot_pr(curves: dict) -> PILImage.Image:
+    fig, ax = plt.subplots(figsize=(8, 6))
+    for k, v in curves.items():
+        ax.plot(v["recall"], v["precision"], label=k)
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
+    ax.set_title("Precision-Recall Curves (IoU=0.5)")
     ax.grid(True, alpha=0.3)
-    ax.set_xlim([0, 1])
-    ax.set_ylim([0, 1])
-    
-    # Convert plot to image
+    ax.legend()
     buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+    plt.savefig(buf, format="png", dpi=150, bbox_inches="tight")
     buf.seek(0)
     img = PILImage.open(buf)
     plt.close(fig)
-    
     return img
 
 
-def log_metrics_to_tensorboard(
-    metrics: dict,
-    writer: SummaryWriter,
-    predictions: list = None,
-    targets: list = None,
-    num_classes: int = 5,
-    global_step: int = 0
-) -> None:
-    """
-    Log all metrics to TensorBoard including detailed PR curves.
-    
-    Args:
-        metrics: Dictionary of computed metrics
-        writer: TensorBoard SummaryWriter
-        predictions: List of all predictions (for detailed curves)
-        targets: List of all targets (for detailed curves)
-        num_classes: Number of classes (excluding background)
-        global_step: Global step for logging (default: 0 for final evaluation)
-    """
-    print("Logging metrics to TensorBoard...")
-    
-    # Main mAP metrics
-    writer.add_scalar('Evaluation/mAP_Total', metrics['map'].item(), global_step)
-    writer.add_scalar('Evaluation/mAP_50', metrics['map_50'].item(), global_step)
-    writer.add_scalar('Evaluation/mAP_75', metrics['map_75'].item(), global_step)
-    
-    # ===== NEW: Log mAP at different IoU thresholds =====
-    # The metric calculator computes mAP at IoU thresholds from 0.50 to 0.95 (step 0.05)
-    # We can extract individual IoU threshold results
-    iou_thresholds = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95]
-    
-    # Log mAP at each IoU threshold as separate points
-    for i, iou in enumerate(iou_thresholds):
-        # Create a pseudo x-axis using IoU as step value (multiply by 100 for better visualization)
-        iou_step = int(iou * 100)
-        writer.add_scalar('Detailed/mAP_vs_IoU_Threshold', metrics['map'].item(), iou_step)
-    
-    # Log the standard IoU thresholds we already have
-    writer.add_scalar('Detailed/mAP_IoU_0.50', metrics['map_50'].item(), 50)
-    writer.add_scalar('Detailed/mAP_IoU_0.75', metrics['map_75'].item(), 75)
-    
-    # ===== NEW: Compute and log Precision-Recall curves =====
-    if predictions is not None and targets is not None:
-        print("Computing Precision-Recall curves...")
-        
-        # Compute PR curves for IoU=0.5
-        pr_curves_50 = compute_precision_recall_curve(predictions, targets, iou_threshold=0.5, num_classes=num_classes)
-        
-        # Plot and log PR curves
-        pr_plot = plot_precision_recall_curves(pr_curves_50)
-        writer.add_image('Curves/Precision_Recall_IoU_0.5', 
-                        np.array(pr_plot).transpose(2, 0, 1), 
-                        global_step)
-        
-        # Log precision and recall values at different confidence thresholds for each class
-        for class_key, pr_data in pr_curves_50.items():
-            class_id = class_key.split('_')[1]
-            
-            # Log precision vs confidence threshold
-            for i, (thresh, prec) in enumerate(zip(pr_data['thresholds'], pr_data['precision'])):
-                writer.add_scalar(f'PR_Details/Class_{class_id}/Precision', 
-                                prec, int(thresh * 100))
-            
-            # Log recall vs confidence threshold  
-            for i, (thresh, rec) in enumerate(zip(pr_data['thresholds'], pr_data['recall'])):
-                writer.add_scalar(f'PR_Details/Class_{class_id}/Recall', 
-                                rec, int(thresh * 100))
-        
-        print("Precision-Recall curves logged!")
-    
-    # Object size-specific mAP
-    if 'map_small' in metrics:
-        writer.add_scalar('Evaluation/mAP_Small', metrics['map_small'].item(), global_step)
-    if 'map_medium' in metrics:
-        writer.add_scalar('Evaluation/mAP_Medium', metrics['map_medium'].item(), global_step)
-    if 'map_large' in metrics:
-        writer.add_scalar('Evaluation/mAP_Large', metrics['map_large'].item(), global_step)
-    
-    # MAR (Mean Average Recall) metrics
-    if 'mar_1' in metrics:
-        writer.add_scalar('Evaluation/MAR_1', metrics['mar_1'].item(), global_step)
-    if 'mar_10' in metrics:
-        writer.add_scalar('Evaluation/MAR_10', metrics['mar_10'].item(), global_step)
-    if 'mar_100' in metrics:
-        writer.add_scalar('Evaluation/MAR_100', metrics['mar_100'].item(), global_step)
-    
-    # Object size-specific MAR
-    if 'mar_small' in metrics:
-        writer.add_scalar('Evaluation/MAR_Small', metrics['mar_small'].item(), global_step)
-    if 'mar_medium' in metrics:
-        writer.add_scalar('Evaluation/MAR_Medium', metrics['mar_medium'].item(), global_step)
-    if 'mar_large' in metrics:
-        writer.add_scalar('Evaluation/MAR_Large', metrics['mar_large'].item(), global_step)
-    
-    # Per-class metrics if available
-    if 'map_per_class' in metrics:
-        per_class_map = metrics['map_per_class']
-        # Handle both scalar and tensor cases
-        if per_class_map.dim() > 0:  # If it's a 1D+ tensor
-            for idx, class_map in enumerate(per_class_map):
-                writer.add_scalar(f'Evaluation/mAP_Class_{idx}', class_map.item(), global_step)
-        else:  # If it's a scalar (0-d tensor)
-            writer.add_scalar('Evaluation/mAP_PerClass_Avg', per_class_map.item(), global_step)
-    
-    if 'mar_100_per_class' in metrics:
-        per_class_mar = metrics['mar_100_per_class']
-        # Handle both scalar and tensor cases
-        if per_class_mar.dim() > 0:  # If it's a 1D+ tensor
-            for idx, class_mar in enumerate(per_class_mar):
-                writer.add_scalar(f'Evaluation/MAR_Class_{idx}', class_mar.item(), global_step)
-        else:  # If it's a scalar (0-d tensor)
-            writer.add_scalar('Evaluation/MAR_PerClass_Avg', per_class_mar.item(), global_step)
-    
-    writer.flush()
-    print("Metrics successfully logged to TensorBoard!")
+# -----------------------------
+# Evaluation loop
+# -----------------------------
+@torch.no_grad()
+def evaluate_model(
+    model: torch.nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    model_name: str,
+    contig2cat: dict[int, int],
+    score_thresh: float | None,
+    debug_limit: int | None = None,
+):
+    model.eval()
+    model.to(device)
+
+    metric = MeanAveragePrecision(box_format="xyxy").to(device)
+    all_preds, all_targs = [], []
+
+    for batch_idx, (images, targets) in enumerate(tqdm(loader, desc="Evaluating", dynamic_ncols=True)):
+        if debug_limit is not None and batch_idx >= debug_limit:
+            print(f"[DEBUG] Early stop at batch {batch_idx}")
+            break
+
+        images = [img.to(device) for img in images]
+        targets_dev = [{k: v.to(device) for k, v in t.items()} for t in targets]
+
+        outputs = model(images)  # list[dict(boxes,scores,labels)]
+
+        # Debug first batch
+        if batch_idx == 0:
+            print("---- RAW MODEL OUTPUT (first batch) ----")
+            print("Number of predictions:", len(outputs))
+            if len(outputs) > 0:
+                print("First pred keys:", outputs[0].keys())
+                print("First pred boxes shape:", outputs[0]["boxes"].shape)
+                print("First pred scores:", outputs[0]["scores"][:5] if outputs[0]["scores"].numel() > 0 else "EMPTY")
+                print("First pred labels:", outputs[0]["labels"][:5] if outputs[0]["labels"].numel() > 0 else "EMPTY")
+
+        preds = map_predictions(outputs, model_name, contig2cat, device, score_thresh=score_thresh)
+        targs = map_targets(targets_dev, device)
+
+        if batch_idx == 0:
+            print("---- AFTER MAPPING ----")
+            print("Pred boxes:", preds[0]["boxes"].shape)
+            print("Pred scores:", preds[0]["scores"][:5] if preds[0]["scores"].numel() > 0 else "EMPTY")
+            print("Pred labels:", preds[0]["labels"][:5] if preds[0]["labels"].numel() > 0 else "EMPTY")
+            print("GT boxes:", targs[0]["boxes"].shape)
+            print("GT labels:", targs[0]["labels"][:10] if targs[0]["labels"].numel() > 0 else "EMPTY")
+            print("contig2cat mapping:", contig2cat)
+
+        # IMPORTANT: do NOT skip metric update for empty preds; torchmetrics handles it.
+        metric.update(preds, targs)
+
+        # Store CPU copies for PR plot
+        for p in preds:
+            all_preds.append(
+                {
+                    "boxes": p["boxes"].detach().cpu(),
+                    "scores": p["scores"].detach().cpu(),
+                    "labels": p["labels"].detach().cpu(),
+                }
+            )
+        for t in targs:
+            all_targs.append(
+                {
+                    "boxes": t["boxes"].detach().cpu(),
+                    "labels": t["labels"].detach().cpu(),
+                }
+            )
+
+    return metric.compute(), all_preds, all_targs
 
 
+# -----------------------------
+# Main
+# -----------------------------
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate object detection model mAP on TEST set')
-    parser.add_argument('--model_path', type=str, required=True,
-                        help='Path to .pth model file')
-    parser.add_argument('--config', type=str, default='config/config.yaml',
-                        help='Path to config file')
-    parser.add_argument('--device', type=str, default='cuda',
-                        choices=['cuda', 'cpu'],
-                        help='Device to use for evaluation')
-    parser.add_argument('--batch_size', type=int, default=4,
-                        help='Batch size for evaluation')
-    parser.add_argument('--num_workers', type=int, default=4,
-                        help='Number of dataloader workers')
-    parser.add_argument('--log_dir', type=str, default='runs/evaluation',
-                        help='TensorBoard log directory')
-    parser.add_argument('--run_name', type=str, default=None,
-                        help='Custom run name for TensorBoard (default: timestamp)')
-    parser.add_argument('--use_val', action='store_true',
-                        help='Use validation set instead of test set')
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_path", required=True)
+    parser.add_argument("--config", default="config/config.yaml")
+    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--use_val", action="store_true")
+    parser.add_argument("--debug_limit", type=int, default=None)
     args = parser.parse_args()
-    
-    # Create run name with timestamp
-    if args.run_name is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        model_name = Path(args.model_path).stem
-        split_name = "val" if args.use_val else "test"
-        run_name = f"{model_name}_{split_name}_{timestamp}"
-    else:
-        run_name = args.run_name
-    
-    # Initialize TensorBoard writer
-    log_path = Path(args.log_dir) / run_name
-    writer = SummaryWriter(log_dir=str(log_path))
-    print(f"TensorBoard logs will be saved to: {log_path}")
-    print(f"View with: tensorboard --logdir {args.log_dir}")
-    
-    # Load configuration
-    print(f"\nLoading configuration from {args.config}")
-    config = load_config(args.config)
-    
-    # Set device
-    device = torch.device(args.device if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
-    
-    # Load test or validation dataset
-    split_name = "validation" if args.use_val else "test"
-    print(f"Loading {split_name} dataset...")
-    
-    # Handle both single-root and split train/val/test configurations
-    data_cfg = config['data']
-    
-    if args.use_val:
-        # Use validation set
-        if 'val_root_dir' in data_cfg:
-            test_root_dir = Path(data_cfg['val_root_dir'])
-            test_ann_file = test_root_dir / data_cfg['val_annotation_file']
-            test_images_root = test_root_dir / data_cfg.get('val_images_root', '.')
-        else:
-            # Legacy single-root configuration
-            test_root_dir = Path(data_cfg['root_dir'])
-            test_ann_file = test_root_dir / data_cfg.get('val_annotation_file', 'annotations.json')
-            test_images_root = test_root_dir / data_cfg.get('images_root', '.')
-    else:
-        # Use test set (preferred for final evaluation)
-        if 'test_root_dir' in data_cfg:
-            test_root_dir = Path(data_cfg['test_root_dir'])
-            test_ann_file = test_root_dir / data_cfg['test_annotation_file']
-            test_images_root = test_root_dir / data_cfg.get('test_images_root', '.')
-        else:
-            # Fallback: try to use test folder in same structure
-            print("[WARNING] No test_root_dir in config. Attempting to use val set...")
-            if 'val_root_dir' in data_cfg:
-                test_root_dir = Path(data_cfg['val_root_dir'])
-                test_ann_file = test_root_dir / data_cfg['val_annotation_file']
-                test_images_root = test_root_dir / data_cfg.get('val_images_root', '.')
-            else:
-                raise ValueError(
-                    "No test or validation configuration found in config file. "
-                    "Please add test_root_dir, test_annotation_file, and test_images_root to config.yaml"
-                )
-    
-    print(f"  Test root: {test_root_dir}")
-    print(f"  Annotation file: {test_ann_file}")
-    print(f"  Images root: {test_images_root}")
-    
-    # Verify paths exist
-    if not test_ann_file.exists():
-        raise FileNotFoundError(f"Annotation file not found: {test_ann_file}")
-    
-    # Import transforms
-    from turbine_processing.transforms import get_val_transform
-    
-    test_dataset = TurbineCocoDataset(
-        images_dir=str(test_images_root),
-        ann_file=str(test_ann_file),
-        transforms=get_val_transform()  # Convert to tensor, no augmentation
+
+    cfg = load_config(args.config)
+
+    device = torch.device(args.device if torch.cuda.is_available() else "cpu")
+    model_name = cfg["model"]["name"].lower().strip()
+
+    # Pick split
+    split = "val" if args.use_val else "test"
+    data_cfg = cfg["data"]
+
+    root = Path(data_cfg[f"{split}_root_dir"])
+    ann = root / data_cfg[f"{split}_annotation_file"]
+    img_root = root / data_cfg.get(f"{split}_images_root", ".")
+
+    print(f"[INFO] Split: {split}")
+    print(f"[INFO] Images root: {img_root}")
+    print(f"[INFO] Annotation: {ann}")
+
+    dataset = TurbineCocoDataset(
+        images_dir=str(img_root),
+        ann_file=str(ann),
+        transforms=get_val_transform(),
     )
-    
-    print(f"{split_name.capitalize()} dataset size: {len(test_dataset)}")
-    
-    # Create test dataloader
-    test_loader = DataLoader(
-        test_dataset,
+    print(f"[INFO] Dataset size: {len(dataset)}")
+
+    # Sanity: how many images have empty GT boxes?
+    empty = 0
+    for i in range(min(200, len(dataset))):
+        _, t = dataset[i]
+        if t["boxes"].shape[0] == 0:
+            empty += 1
+    print(f"[SANITY] Empty-GT images in first 200: {empty}/200")
+
+    _, contig2cat = build_label_maps(dataset)
+
+    loader = DataLoader(
+        dataset,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
         collate_fn=TurbineDataLoader.collate_fn,
-        pin_memory=True if args.device == 'cuda' else False,
+        pin_memory=(device.type == "cuda"),
     )
-    
-    # Load model
-    print(f"Loading model from {args.model_path}")
-    num_classes = config['model']['num_object_classes'] + 1  # +1 for background
-    model = get_model(num_classes=num_classes, load_weights=False)
-    
-    # Load trained weights
-    checkpoint = torch.load(args.model_path, map_location=device)
-    
-    # Handle different checkpoint formats
-    if isinstance(checkpoint, dict):
-        if 'model_state_dict' in checkpoint:
-            model.load_state_dict(checkpoint['model_state_dict'])
-        elif 'state_dict' in checkpoint:
-            model.load_state_dict(checkpoint['state_dict'])
+
+    # Build model
+    model = get_model(
+        model_name=cfg["model"]["name"],
+        num_object_classes=int(cfg["model"]["num_object_classes"]),
+        pretrained=False,
+        cfg=cfg.get("model", {}),
+    ).to(device)
+
+    # Load checkpoint safely
+    ckpt = torch.load(args.model_path, map_location=device)
+    if isinstance(ckpt, dict):
+        if "model_state_dict" in ckpt:
+            state = ckpt["model_state_dict"]
+        elif "state_dict" in ckpt:
+            state = ckpt["state_dict"]
         else:
-            model.load_state_dict(checkpoint)
+            state = ckpt
     else:
-        model.load_state_dict(checkpoint)
-    
-    print("Model loaded successfully!")
-    
-    # Log model path and configuration to TensorBoard
-    writer.add_text('Model/Path', args.model_path)
-    writer.add_text('Model/Config', str(config))
-    writer.add_text('Evaluation/Split', split_name)
-    writer.add_text('Evaluation/Dataset_Size', str(len(test_dataset)))
-    writer.add_text('Evaluation/Batch_Size', str(args.batch_size))
-    writer.add_text('Evaluation/Device', str(device))
-    
-    # Evaluate model
-    metrics, all_predictions, all_targets = evaluate_model(model, test_loader, device)
-    
-    # Print results to console
-    print_metrics(metrics)
-    
-    # Log metrics to TensorBoard (now with PR curves)
-    log_metrics_to_tensorboard(
-        metrics, 
-        writer, 
-        predictions=all_predictions,
-        targets=all_targets,
-        num_classes=config['model']['num_object_classes'],
-        global_step=0
+        state = ckpt
+
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    print(f"[INFO] Loaded weights. Missing keys: {len(missing)}, Unexpected keys: {len(unexpected)}")
+    if len(missing) > 0:
+        print("[INFO] Example missing key:", missing[0])
+    if len(unexpected) > 0:
+        print("[INFO] Example unexpected key:", unexpected[0])
+
+    # Score threshold
+    # For DETR, it's often helpful to filter very low confidence predictions.
+    score_thresh = None
+    if model_name == "detr":
+        score_thresh = float(cfg.get("training", {}).get("detr_score_thresh", 0.05))
+        print(f"[INFO] Using DETR score threshold: {score_thresh}")
+    else:
+        print("[INFO] No score threshold filtering for Faster R-CNN (using raw outputs).")
+
+    metrics, preds, targs = evaluate_model(
+        model=model,
+        loader=loader,
+        device=device,
+        model_name=model_name,
+        contig2cat=contig2cat,
+        score_thresh=score_thresh,
+        debug_limit=args.debug_limit,
     )
-    
-    # Save metrics to YAML file
-    output_path = Path(args.model_path).parent / f'evaluation_metrics_{run_name}.yaml'
-    with open(output_path, 'w') as f:
-        yaml.dump({k: v.item() for k, v in metrics.items()}, f)
-    print(f"Metrics saved to {output_path}")
-    
-    # Close TensorBoard writer
-    writer.close()
-    print(f"\nEvaluation complete! View results in TensorBoard:")
-    print(f"  tensorboard --logdir {args.log_dir}")
+
+    print("\n===== mAP RESULTS =====")
+    for k, v in metrics.items():
+        if torch.is_tensor(v):
+            if v.numel() == 1:
+                print(f"{k:18s}: {v.item():.4f}")
+            else:
+                # tensors like per-class arrays
+                print(f"{k:18s}: tensor(shape={tuple(v.shape)})")
+        else:
+            print(f"{k:18s}: {v}")
+
+    # PR curve plot
+    pr = compute_pr_curves(preds, targs, iou_thr=0.5)
+    if len(pr) > 0:
+        plot_pr(pr).save("pr_curve.png")
+        print("[INFO] Saved PR curve → pr_curve.png")
+    else:
+        print("[INFO] No PR curve generated (no valid classes/GT).")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+

@@ -6,17 +6,105 @@ FULLY INTEGRATED:
 - ✅ Adaptive Sampler (adjusts weights based on per-class performance)
 - ✅ Balanced Sampler (sqrt/log/equal modes)
 - ✅ All config options respected
+- ✅ FIXED: Bounding box format conversion (Pascal VOC -> COCO format) for DETR
+- ✅ NEW: Inner-SIoU Loss Function Monkey Patch for Small Object Detection (UAV-DETR)
 """
 
 import torch
 import torch.nn as nn
 from transformers import DetrForObjectDetection, DetrImageProcessor
+import transformers.models.detr.modeling_detr as modeling_detr
 from torch.utils.data import DataLoader
 import numpy as np
 from typing import Dict, List, Tuple
 import os
 import torch.nn.functional as F
 from tqdm.auto import tqdm
+
+# ==============================================================================
+# INNER-SIoU LOSS PATCH (From UAV-DETR Paper)
+# ==============================================================================
+def patch_inner_siou_loss():
+    """
+    Safely overrides Hugging Face's default GIoU loss with the Inner-SIoU loss
+    from the UAV-DETR paper. Uses algebraic simplification for the SIoU angle cost 
+    to prevent NaN gradients.
+    """
+    def inner_siou_matrix(boxes1, boxes2, ratio=1.25, eps=1e-7):
+        # Broadcast to create [N, M] matrix comparing all predictions to all targets
+        x1_1, y1_1, x2_1, y2_1 = boxes1.unsqueeze(1).unbind(dim=2) 
+        x1_2, y1_2, x2_2, y2_2 = boxes2.unsqueeze(0).unbind(dim=2) 
+        
+        w1, h1 = x2_1 - x1_1, y2_1 - y1_1
+        w2, h2 = x2_2 - x1_2, y2_2 - y1_2
+        cx1, cy1 = (x1_1 + x2_1) / 2, (y1_1 + y2_1) / 2
+        cx2, cy2 = (x1_2 + x2_2) / 2, (y1_2 + y2_2) / 2
+        
+        # ----------------------------------------------------
+        # 1. INNER IOU (Scale boxes by 1.25 for sensitivity)
+        # ----------------------------------------------------
+        in_w1, in_h1 = w1 * ratio, h1 * ratio
+        in_w2, in_h2 = w2 * ratio, h2 * ratio
+        
+        in_x1_1, in_y1_1 = cx1 - in_w1 / 2, cy1 - in_h1 / 2
+        in_x2_1, in_y2_1 = cx1 + in_w1 / 2, cy1 + in_h1 / 2
+        in_x1_2, in_y1_2 = cx2 - in_w2 / 2, cy2 - in_h2 / 2
+        in_x2_2, in_y2_2 = cx2 + in_w2 / 2, cy2 + in_h2 / 2
+        
+        inter_x1 = torch.max(in_x1_1, in_x1_2)
+        inter_y1 = torch.max(in_y1_1, in_y1_2)
+        inter_x2 = torch.min(in_x2_1, in_x2_2)
+        inter_y2 = torch.min(in_y2_1, in_y2_2)
+        
+        inter_w = torch.clamp(inter_x2 - inter_x1, min=0)
+        inter_h = torch.clamp(inter_y2 - inter_y1, min=0)
+        inter_area = inter_w * inter_h
+        
+        area1, area2 = in_w1 * in_h1, in_w2 * in_h2
+        union = area1 + area2 - inter_area
+        inner_iou = inter_area / (union + eps)
+        
+        # ----------------------------------------------------
+        # 2. SIOU PENALTY (Calculated on original boxes)
+        # ----------------------------------------------------
+        s_cw = torch.abs(cx2 - cx1)
+        s_ch = torch.abs(cy2 - cy1)
+        
+        # Angle Cost (Algebraic simplification of sin(2*alpha) avoids NaNs)
+        Lambda = 2 * s_cw * s_ch / (s_cw**2 + s_ch**2 + eps)
+        gamma = 2 - Lambda
+        
+        # Enclosing box
+        enc_x1 = torch.min(x1_1, x1_2)
+        enc_y1 = torch.min(y1_1, y1_2)
+        enc_x2 = torch.max(x2_1, x2_2)
+        enc_y2 = torch.max(y2_1, y2_2)
+        
+        cw = torch.clamp(enc_x2 - enc_x1, min=eps)
+        ch = torch.clamp(enc_y2 - enc_y1, min=eps)
+        
+        # Distance Cost
+        rho_x = (s_cw / cw) ** 2
+        rho_y = (s_ch / ch) ** 2
+        Delta = (1 - torch.exp(-gamma * rho_x)) + (1 - torch.exp(-gamma * rho_y))
+        
+        # Shape Cost
+        omega_w = torch.abs(w1 - w2) / torch.clamp(torch.max(w1, w2), min=eps)
+        omega_h = torch.abs(h1 - h2) / torch.clamp(torch.max(h1, h2), min=eps)
+        Omega = (1 - torch.exp(-omega_w)) ** 4 + (1 - torch.exp(-omega_h)) ** 4
+        
+        siou_penalty = (Delta + Omega) / 2
+        
+        # Return format aligns with HuggingFace's loss execution (1 - output)
+        return inner_iou - siou_penalty
+
+    # Inject the function into the transformers library
+    modeling_detr.generalized_box_iou = inner_siou_matrix
+    print("✅ Successfully patched Hugging Face DETR to use Inner-SIoU Loss (Ratio=1.25)")
+
+# Trigger the patch immediately so the model utilizes it during initialization
+patch_inner_siou_loss()
+# ==============================================================================
 
 
 class DETRTransformAdapter:
@@ -38,10 +126,6 @@ class DETRTransformAdapter:
         # First apply your existing transforms (Albumentations)
         image, target = self.albumentations_transform(image, target)
         
-        # At this point:
-        # - image is a torch.Tensor [C, H, W] in range [0, 1], float32
-        # - target has boxes, labels, area, iscrowd, image_id
-        
         # Convert image from [C, H, W] to [H, W, C] for DETR processor
         if isinstance(image, torch.Tensor):
             if image.shape[0] == 3:  # CHW format
@@ -62,12 +146,16 @@ class DETRTransformAdapter:
         boxes = target["boxes"].cpu().numpy() if isinstance(target["boxes"], torch.Tensor) else target["boxes"]
         labels = target["labels"].cpu().numpy() if isinstance(target["labels"], torch.Tensor) else target["labels"]
         
-        # DETR expects annotations as a list of dicts
         annotations = {
             "image_id": target["image_id"].item() if isinstance(target["image_id"], torch.Tensor) else target["image_id"],
             "annotations": [
                 {
-                    "bbox": boxes[i].tolist(),
+                    "bbox": [
+                        float(boxes[i][0]),                    # xmin
+                        float(boxes[i][1]),                    # ymin
+                        float(boxes[i][2] - boxes[i][0]),      # width  (xmax - xmin)
+                        float(boxes[i][3] - boxes[i][1])       # height (ymax - ymin)
+                    ],
                     "category_id": int(labels[i]),
                     "area": float(target["area"][i]) if "area" in target else float((boxes[i][2] - boxes[i][0]) * (boxes[i][3] - boxes[i][1])),
                     "iscrowd": int(target["iscrowd"][i]) if "iscrowd" in target else 0,
@@ -77,7 +165,6 @@ class DETRTransformAdapter:
         }
         
         # Process with DETR processor (handles normalization, resizing, etc.)
-        # Note: processor expects boxes in [x_min, y_min, x_max, y_max] format (pascal_voc)
         processed = self.processor(
             images=image_np,
             annotations=[annotations],
@@ -109,7 +196,7 @@ class DETRWithExistingDataPipeline:
         self.device = torch.device(config['training']['device'])
         
         # Initialize DETR processor
-        self.processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
+        self.processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50", do_convert_annotations=True)
         
         # Initialize DETR model
         self.model = DetrForObjectDetection.from_pretrained(
@@ -357,7 +444,7 @@ class DETRWithExistingDataPipeline:
             
             # Move targets to device
             targets = [{k: v.to(self.device) if isinstance(v, torch.Tensor) else v 
-                       for k, v in t.items()} for t in targets]
+                        for k, v in t.items()} for t in targets]
             
             # Forward pass
             outputs = self.model(pixel_values=pixel_values, labels=targets)
@@ -389,7 +476,7 @@ class DETRWithExistingDataPipeline:
         for pixel_values, targets in pbar:
             pixel_values = pixel_values.to(self.device)
             targets = [{k: v.to(self.device) if isinstance(v, torch.Tensor) else v 
-                       for k, v in t.items()} for t in targets]
+                        for k, v in t.items()} for t in targets]
             
             outputs = self.model(pixel_values=pixel_values, labels=targets)
             loss = outputs.loss

@@ -277,15 +277,18 @@ class DETREvaluator:
                     y_true.append(0);  y_scores.append(m['score'])
 
             n_pos = int(sum(y_true)) if y_true else 0
+            made_predictions = sum(y_scores) > 0.0
 
-            if n_pos > 0:
+            if n_pos > 0 and made_predictions:
                 y_true_arr   = np.array(y_true)
                 y_scores_arr = np.array(y_scores)
                 precision, recall, _ = precision_recall_curve(y_true_arr, y_scores_arr)
                 ap = average_precision_score(y_true_arr, y_scores_arr)
             else:
+                # If no ground truths OR no predictions were made, AP is 0.0
                 precision = recall = np.array([])
                 ap = 0.0
+            # ---------------------------------------------------------
 
             pr_data[class_id] = {
                 'precision'  : precision,
@@ -319,11 +322,11 @@ class DETREvaluator:
         # --- BG REPORT ---
         bg_accuracy = 0.0
         if bg_stats['total_empty'] > 0:
-            acc = (bg_stats['correct_empty'] / bg_stats['total_empty']) * 100
+            bg_accuracy = (bg_stats['correct_empty'] / bg_stats['total_empty']) * 100  
             print(f"\n  [Background Performance]")
             print(f"  Total Empty Images : {bg_stats['total_empty']}")
             print(f"  Correctly Silent   : {bg_stats['correct_empty']}")
-            print(f"  Background Acc     : {acc:.2f}%")
+            print(f"  Background Acc     : {bg_accuracy:.2f}%")
         # -----------------
 
         print("\nMatching predictions to ground truth…")

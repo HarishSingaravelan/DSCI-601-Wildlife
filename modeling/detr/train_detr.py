@@ -10,6 +10,12 @@ from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from detr_with_existing_pipeline import DETRWithExistingDataPipeline
+
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from detr_evaluation import DETREvaluator
 
 
@@ -51,8 +57,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         )
 
         # --- TIMESTAMPED TENSORBOARD LOGGING ---
-        # Get current time: YYYY-MM-DD_HH-MM-SS
-        # --- TIMESTAMPED TENSORBOARD LOGGING ---
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         
         # 1. CREATE A DESCRIPTIVE FOLDER NAME
@@ -69,8 +73,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         # Figure out background mode
         bg_str = "dynBG" if data_cfg.get('dynamic_background', False) else f"fixBG_{data_cfg.get('background_ratio', 0.5)}"
         
-        # Combine them into the folder name
-        # Example: runs/detr_adapt_equal_dynBG_2024-02-18_14-30-00
         log_dir = f"runs/detr_{sampler_str}_{bg_str}_{timestamp}"
         
         self.writer = SummaryWriter(log_dir=log_dir)
@@ -78,7 +80,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         print(f"   (Run 'tensorboard --logdir=runs' to view)")
 
         # 2. LOG EXACT SETTINGS TO TENSORBOARD'S "TEXT" TAB
-        # We format it as Markdown so it looks clean in the dashboard
         config_md = f"""
         ### Adaptive Sampler Settings
         * **Mode:** `{data_cfg.get('initial_mode')}`
@@ -96,7 +97,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         * **Epochs:** `{config['training'].get('num_epochs')}`
                 """
         
-        # Write to global step 0
         self.writer.add_text("Experiment_Configuration", config_md, 0)
 
     def _setup_adaptive_sampler(self, config):
@@ -117,11 +117,10 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             max_bg_ratio=config['data'].get('max_bg_ratio', 0.50),
         )
 
-        # Recreate train loader with adaptive sampler
         self.train_loader = DataLoader(
             self.train_dataset,
             batch_size=config['training']['batch_size'],
-            shuffle=False,  # Sampler handles shuffling
+            shuffle=False,  
             sampler=self.adaptive_sampler,
             num_workers=config['training']['num_workers'],
             collate_fn=self.collate_fn,
@@ -138,19 +137,14 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         if 'pr_data' not in metrics:
             return
 
-        # Extract per-class AP
         class_ap = {}
         for class_id, data in metrics['pr_data'].items():
-            if class_id > 0:  # Skip background
+            if class_id > 0:  
                 class_ap[class_id] = data['ap']
 
-        # Extract Background Accuracy (if available)
         bg_accuracy = metrics.get('bg_accuracy', None)
-
-        # --- UPDATE THIS LINE TO PASS bg_accuracy ---
         self.adaptive_sampler.update_class_weights(class_ap, bg_accuracy)
 
-        # Log weights to tensorboard
         for class_id, weight in self.adaptive_sampler.get_current_weights().items():
             if class_id < len(self.config['model']['class_names']):
                 class_name = self.config['model']['class_names'][class_id]
@@ -159,7 +153,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
                 
             self.writer.add_scalar(f'Sampler_Weights/{class_name}', weight, self.current_epoch)
             
-        # Log the dynamic background ratio so you can watch it change
         if hasattr(self.adaptive_sampler, 'bg_ratio'):
             self.writer.add_scalar('Sampler_Weights/Background_Ratio', self.adaptive_sampler.bg_ratio, self.current_epoch)
 
@@ -174,7 +167,9 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             leave=True,
             dynamic_ncols=True,
             unit='batch',
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}'
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}',
+            mininterval=30.0,  
+            maxinterval=60.0
         )
 
         for batch_idx, (pixel_values, targets) in enumerate(pbar):
@@ -196,11 +191,11 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             total_loss += loss.item()
             avg_loss = total_loss / (batch_idx + 1)
             
-            # Update progress bar with current loss
+            # --- REFRESH FIX APPLIED HERE ---
             pbar.set_postfix({
                 'loss': f'{avg_loss:.4f}',
                 'batch_loss': f'{loss.item():.4f}'
-            })
+            }, refresh=False)
 
         avg_loss = total_loss / len(self.train_loader)
         self.train_losses.append(avg_loss)
@@ -218,7 +213,9 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             leave=True,
             dynamic_ncols=True,
             unit='batch',
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}'
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}',
+            mininterval=30.0, 
+            maxinterval=60.0
         )
 
         for batch_idx, (pixel_values, targets) in enumerate(pbar):
@@ -232,17 +229,19 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             total_loss += outputs.loss.item()
             
             avg_loss = total_loss / (batch_idx + 1)
+            
+            # --- REFRESH FIX APPLIED HERE ---
             pbar.set_postfix({
                 'loss': f'{avg_loss:.4f}',
                 'batch_loss': f'{outputs.loss.item():.4f}'
-            })
+            }, refresh=False)
 
         avg_loss = total_loss / len(self.val_loader)
         self.val_losses.append(avg_loss)
         return avg_loss
 
     def train(self):
-        """Main training loop with adaptive sampling"""
+        """Main training loop with adaptive sampling and resume capability"""
         print("="*70)
         print("DETR Training with Adaptive Sampling")
         print("="*70)
@@ -257,32 +256,51 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         print("="*70 + "\n")
 
         num_epochs = self.config['training']['num_epochs']
+        start_epoch = 0
 
-        for epoch in range(num_epochs):
-            self.current_epoch = epoch  # Track for tensorboard logging
+        # --- RESUME CHECKPOINT LOGIC ---
+        resume_path = self.config['training'].get('resume_checkpoint', None)
+        if resume_path and os.path.exists(resume_path):
+            print(f"[INFO] Pipeline recovery: Loading checkpoint from {resume_path}")
+            checkpoint = torch.load(resume_path, map_location=self.device, weights_only=False)
+            
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+            if 'scheduler_state_dict' in checkpoint and hasattr(self, 'scheduler'):
+                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            
+            self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+            
+            if hasattr(self, 'best_map'):
+                self.best_map = checkpoint.get('best_map', 0.0)
+                
+            start_epoch = checkpoint['epoch'] + 1
+            print(f"[INFO] Successfully restored state. Resuming from Epoch {start_epoch + 1}...\n")
+        elif resume_path:
+            print(f"[WARNING] Checkpoint {resume_path} not found! Starting fresh.\n")
+        # -------------------------------
+
+        for epoch in range(start_epoch, num_epochs):
+            self.current_epoch = epoch  
             
             print(f"\n{'='*60}")
             print(f"Epoch {epoch + 1} / {num_epochs}")
             print(f"{'='*60}")
             
-            # Print expected class distribution for this epoch
             if hasattr(self, 'adaptive_sampler') and epoch > 0:
                 self.adaptive_sampler.print_current_distribution()
 
-            # Train
             train_loss = self.train_one_epoch(epoch)
             print(f"  Train loss : {train_loss:.4f}")
             self.writer.add_scalar('Loss/train', train_loss, epoch)
             self.writer.add_scalar('LR', self.optimizer.param_groups[0]['lr'], epoch)
 
-            # Validate + evaluate every N epochs
             if (epoch + 1) % self.eval_every_n_epochs == 0:
-
                 val_loss = self.validate()
                 print(f"  Val loss   : {val_loss:.4f}")
                 self.writer.add_scalar('Loss/validation', val_loss, epoch)
 
-                # Early stopping check
                 if val_loss < self.best_val_loss:
                     self.best_val_loss = val_loss
                     self.patience_counter = 0
@@ -290,7 +308,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
                     self.patience_counter += 1
                     print(f"  ⚠ No improvement for {self.patience_counter}/{self.patience} evaluations")
 
-                # Full evaluation (Unpacking fixed here)
                 print(f"\n  Running detailed evaluation at epoch {epoch + 1}…")
                 metrics, _, _ = self.evaluator.evaluate(epoch=epoch + 1)
 
@@ -298,55 +315,47 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
                     self.writer.add_scalar('Metrics/mAP', metrics['mAP'], epoch)
                     
                     for class_id, data in metrics['pr_data'].items():
-                        # Safe class naming for tensorboard
                         c_name = data["class_name"].replace(" ", "_")
                         self.writer.add_scalar(f'AP/{c_name}', data['ap'], epoch)
 
-                    # Save best model
-                    if self.save_best_model and metrics['mAP'] > self.best_map:
+                    if self.save_best_model and metrics['mAP'] > getattr(self, 'best_map', 0.0):
                         self.best_map = metrics['mAP']
                         best_path = self.config['training']['output_model_path'].replace('.pth', '_best.pth')
                         torch.save(self.model.state_dict(), best_path)
                         print(f"  🎉 New best mAP={self.best_map:.4f} → {best_path}")
 
-                    # UPDATE ADAPTIVE SAMPLER
                     self._update_sampler_weights(metrics)
 
-                # Early stop?
                 if self.patience_counter >= self.patience:
                     print(f"\n⏹  Early stopping at epoch {epoch + 1}.")
                     break
-
             else:
                 next_eval = ((epoch // self.eval_every_n_epochs) + 1) * self.eval_every_n_epochs
                 print(f"  (Skipping validation — next eval at epoch {next_eval})")
 
-            # Scheduler step
-            self.scheduler.step()
+            if hasattr(self, 'scheduler'):
+                self.scheduler.step()
 
-            # Checkpoint
             if self.save_ckpt_every > 0 and (epoch + 1) % self.save_ckpt_every == 0:
                 ckpt_dir = self.config['training'].get('checkpoint_dir', 'checkpoints/')
                 os.makedirs(ckpt_dir, exist_ok=True)
                 ckpt_path = os.path.join(ckpt_dir, f"checkpoint_epoch_{epoch+1}.pth")
                 
-                # Save sampler state too
                 sampler_state = self.adaptive_sampler.get_current_weights() if hasattr(self, 'adaptive_sampler') else None
                 
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': self.model.state_dict(),
                     'optimizer_state_dict': self.optimizer.state_dict(),
-                    'scheduler_state_dict': self.scheduler.state_dict(),
+                    'scheduler_state_dict': getattr(self.scheduler, 'state_dict', lambda: None)(),
                     'train_loss': train_loss,
-                    'best_val_loss': self.best_val_loss,
-                    'best_map': self.best_map,
+                    'best_val_loss': getattr(self, 'best_val_loss', float('inf')),
+                    'best_map': getattr(self, 'best_map', 0.0),
                     'sampler_weights': sampler_state,
                     'config': self.config,
                 }, ckpt_path)
                 print(f"  Checkpoint saved → {ckpt_path}")
 
-        # Final test evaluation
         print("\n" + "="*60)
         print("Final evaluation on test set…")
         print("="*60)
@@ -355,22 +364,20 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         out_path = self.config['training']['output_model_path']
         torch.save(self.model.state_dict(), out_path)
 
-        # Print summary
         print("\n" + "="*60)
         print("Training Summary")
         print("="*60)
-        print(f"  Best validation mAP : {self.best_map:.4f}")
-        print(f"  Best val loss       : {self.best_val_loss:.4f}")
+        print(f"  Best validation mAP : {getattr(self, 'best_map', 0.0):.4f}")
+        print(f"  Best val loss       : {getattr(self, 'best_val_loss', float('inf')):.4f}")
         print(f"  Final test mAP      : {test_metrics.get('mAP', 0.0):.4f}")
         print(f"  Epochs completed    : {epoch + 1}")
         print(f"  Model saved         : {out_path}")
         print(f"  TensorBoard Log     : {self.writer.log_dir}")
         
-        # Print final sampler weights if adaptive
         if hasattr(self, 'adaptive_sampler'):
             print("\n  Final class weights:")
             weights = self.adaptive_sampler.get_current_weights()
-            for cls_id in sorted(weights.keys())[:10]:  # Show top 10
+            for cls_id in sorted(weights.keys())[:10]:  
                 cls_name = self.config['model']['class_names'][cls_id] if cls_id < len(self.config['model']['class_names']) else f"class_{cls_id}"
                 print(f"    {cls_name:30s}: {weights[cls_id]:.4f}")
         

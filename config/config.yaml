@@ -2,20 +2,20 @@
 # DETR configuration for turbine_split_all_classes dataset (55 species)
 
 training:
-  num_epochs: 500              
+  num_epochs: 400              
   batch_size: 16 
   num_workers: 34
-  learning_rate: 0.00002        
+  learning_rate: 0.00001        
   weight_decay: 0.0001
   # Learning rate scheduler
   scheduler_step_size: 200       # Reduce LR every N epochs 
   scheduler_gamma: 0.1          # LR = LR * gamma
   
   # Early stopping
-  patience: 85   # Stop if no improvement for N evaluations
+  patience: 50   # Stop if no improvement for N evaluations
   
   device: "cuda"
-  output_model_path: "detr_turbine_detection_full_log_class_bg_0.2.pth"
+  output_model_path: "detr_turbine_detection_full_log_class_bg_0.5_inner_siou.pth"
 
   # Evaluation
   eval_every_n_epochs: 5      # Evaluate less frequently (dataset is larger)
@@ -23,8 +23,11 @@ training:
   
 
   # Checkpointing
-  checkpoint_dir: "checkpoints/full_run_log_sampler_confidence_0.2_bg/"
+  checkpoint_dir: "checkpoints/full_run_log_sampler_confidence_0.5_bg_inner_siou_bg_dynamic/"
   save_checkpoint_every: 10
+
+  # Resume from checkpoint
+  resume_checkpoint: "checkpoints/full_run_log_sampler_confidence_0.5_bg_inner_siou_bg_dynamic/checkpoint_epoch_50.pth"  # set null if starting fresh
 
 evaluation:
   compute_pr_curve: true
@@ -32,7 +35,7 @@ evaluation:
   confidence_threshold: 0.2   
   iou_threshold: 0.5
   save_plots: true
-  plots_dir: "metrics/evaluation_plots__full_run_log_sampler_confidence_0.2_bg/"
+  plots_dir: "metrics/evaluation_plots__full_run_log_sampler_confidence_0.5_bg_inner_siou_bg_dynamic/"
   show_plots: false
 
 data:
@@ -61,7 +64,7 @@ data:
   max_weight: 5.0               # Maximum weight for any class
   
   # --- NEW BACKGROUND SETTINGS ---
-  background_ratio: 0.25        # Initial background ratio (0.5 = 50%)
+  background_ratio: 0.20        # Initial background ratio (0.5 = 50%)
   dynamic_background: true      # Automatically adjust BG ratio based on validation
   min_bg_ratio: 0.02            # Never drop below 15% background
   max_bg_ratio: 0.50            # Never exceed 50% background

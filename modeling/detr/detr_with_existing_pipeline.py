@@ -3,6 +3,7 @@ DETR Model with Existing Faster R-CNN Data Pipeline - FIXED for Variable Image S
 Handles images of different sizes by padding them to the same dimensions
 
 FULLY INTEGRATED:
+- ✅ Dynamic Architecture Toggle (Standard DETR vs Deformable DETR)
 - ✅ Adaptive Sampler (adjusts weights based on per-class performance)
 - ✅ Balanced Sampler (sqrt/log/equal modes)
 - ✅ All config options respected
@@ -12,7 +13,13 @@ FULLY INTEGRATED:
 
 import torch
 import torch.nn as nn
-from transformers import DetrForObjectDetection, DetrImageProcessor
+# --- UPDATED IMPORTS FOR DEFORMABLE DETR ---
+from transformers import (
+    DetrForObjectDetection, 
+    DetrImageProcessor,
+    DeformableDetrForObjectDetection,
+    DeformableDetrImageProcessor
+)
 import transformers.models.detr.modeling_detr as modeling_detr
 from torch.utils.data import DataLoader
 import numpy as np
@@ -195,16 +202,46 @@ class DETRWithExistingDataPipeline:
         self.config = config
         self.device = torch.device(config['training']['device'])
         
-        # Initialize DETR processor
-        self.processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50", do_convert_annotations=True)
+        # ---------------------------------------------------------
+        # DYNAMIC ARCHITECTURE INITIALIZATION
+        # ---------------------------------------------------------
+        arch = config['model'].get('architecture', 'standard_detr')
+        model_name = config['model'].get('pretrained_model', 'facebook/detr-resnet-50')
         
-        # Initialize DETR model
-        self.model = DetrForObjectDetection.from_pretrained(
-            "facebook/detr-resnet-50",
-            num_labels=config['model']['num_object_classes'],
-            ignore_mismatched_sizes=True
-        )
-        self.model.to(self.device)
+        print(f"\n[INFO] Initializing Architecture: {arch.upper()} from {model_name}")
+
+        if arch == 'deformable_detr':
+            self.processor = DeformableDetrImageProcessor.from_pretrained(model_name, do_convert_annotations=True)
+            self.model = DeformableDetrForObjectDetection.from_pretrained(
+                model_name,
+                num_labels=config['model']['num_object_classes'],
+                ignore_mismatched_sizes=True
+            )
+            self.model.to(self.device)
+
+            # CRITICAL: Deformable DETR requires the ResNet backbone to learn 10x slower 
+            # than the attention modules to prevent the loss from exploding.
+            param_dicts = [
+                {"params": [p for n, p in self.model.named_parameters() if "backbone" not in n and p.requires_grad]},
+                {"params": [p for n, p in self.model.named_parameters() if "backbone" in n and p.requires_grad],
+                 "lr": config['training']['learning_rate'] * 0.1}, 
+            ]
+            
+        else:
+            # Fallback to Standard DETR
+            self.processor = DetrImageProcessor.from_pretrained(model_name, do_convert_annotations=True)
+            self.model = DetrForObjectDetection.from_pretrained(
+                model_name,
+                num_labels=config['model']['num_object_classes'],
+                ignore_mismatched_sizes=True
+            )
+            self.model.to(self.device)
+
+            # Standard DETR uses a flat learning rate
+            param_dicts = [
+                {"params": [p for n, p in self.model.named_parameters() if p.requires_grad]}
+            ]
+        # ---------------------------------------------------------
 
         import sys
         from pathlib import Path
@@ -371,9 +408,9 @@ class DETRWithExistingDataPipeline:
         
         # ═══════════════════════════════════════════════════════════════
         
-        # Initialize optimizer
+        # --- UPDATED: Initialize optimizer with dynamic param_dicts ---
         self.optimizer = torch.optim.AdamW(
-            self.model.parameters(),
+            param_dicts, 
             lr=config['training']['learning_rate'],
             weight_decay=config['training']['weight_decay']
         )

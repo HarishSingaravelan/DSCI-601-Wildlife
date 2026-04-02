@@ -3,7 +3,7 @@
 
 training:
   num_epochs: 400              
-  batch_size: 16 
+  batch_size: 8 
   num_workers: 34
   learning_rate: 0.00001        
   weight_decay: 0.0001
@@ -15,7 +15,7 @@ training:
   patience: 50   # Stop if no improvement for N evaluations
   
   device: "cuda"
-  output_model_path: "detr_turbine_detection_full_log_class_bg_0.5_inner_siou.pth"
+  output_model_path: "detr_turbine_detection_deformable_run.pth"
 
   # Evaluation
   eval_every_n_epochs: 5      # Evaluate less frequently (dataset is larger)
@@ -23,11 +23,11 @@ training:
   
 
   # Checkpointing
-  checkpoint_dir: "checkpoints/full_run_log_sampler_confidence_0.5_bg_inner_siou_bg_dynamic/"
+  checkpoint_dir: "checkpoints/deformable_run"
   save_checkpoint_every: 10
 
   # Resume from checkpoint
-  resume_checkpoint: "checkpoints/full_run_log_sampler_confidence_0.5_bg_inner_siou_bg_dynamic/checkpoint_epoch_50.pth"  # set null if starting fresh
+  resume_checkpoint: null  # set null if starting fresh
 
 evaluation:
   compute_pr_curve: true
@@ -35,7 +35,7 @@ evaluation:
   confidence_threshold: 0.2   
   iou_threshold: 0.5
   save_plots: true
-  plots_dir: "metrics/evaluation_plots__full_run_log_sampler_confidence_0.5_bg_inner_siou_bg_dynamic/"
+  plots_dir: "metrics/evaluation_plots__deformable_run/"
   show_plots: false
 
 data:
@@ -154,8 +154,8 @@ model:
 
                     
 
-  pretrained_model: "facebook/detr-resnet-50"
-  backbone: "resnet50"
+  architecture: "deformable_detr"               # Options: "standard_detr" or "deformable_detr"
+  pretrained_model: "SenseTime/deformable-detr" # Options: "facebook/detr-resnet-50" or "SenseTime/deformable-detr"
 
 
 

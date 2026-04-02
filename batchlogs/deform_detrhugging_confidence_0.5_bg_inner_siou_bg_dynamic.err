@@ -1,0 +1,382 @@
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/networkx/utils/backends.py:135: RuntimeWarning: networkx backend defined more than once: nx-loopback
+  backends.update(_get_backends("networkx.backends"))
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.downsample.0.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.downsample.1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.0.downsample.1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.1.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer1.2.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.downsample.0.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.downsample.1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.0.downsample.1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.1.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.2.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer2.3.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.downsample.0.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.downsample.1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.0.downsample.1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.1.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.2.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.3.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.4.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer3.5.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.downsample.0.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.downsample.1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.0.downsample.1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.1.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.conv1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.bn1.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.bn1.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.conv2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.bn2.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.bn2.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.conv3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.bn3.weight: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py:2409: UserWarning: for layer4.2.bn3.bias: copying from a non-meta parameter in the checkpoint to a meta parameter in the current model, which is a no-op. (Did you mean to pass `assign=True` to assign items in the state dictionary to their corresponding key in the module instead of copying them in place?)
+  warnings.warn(
+Some weights of the model checkpoint at SenseTime/deformable-detr were not used when initializing DeformableDetrForObjectDetection: ['model.backbone.conv_encoder.model.layer1.0.downsample.1.num_batches_tracked', 'model.backbone.conv_encoder.model.layer2.0.downsample.1.num_batches_tracked', 'model.backbone.conv_encoder.model.layer3.0.downsample.1.num_batches_tracked', 'model.backbone.conv_encoder.model.layer4.0.downsample.1.num_batches_tracked']
+- This IS expected if you are initializing DeformableDetrForObjectDetection from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing DeformableDetrForObjectDetection from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+Some weights of DeformableDetrForObjectDetection were not initialized from the model checkpoint at SenseTime/deformable-detr and are newly initialized because the shapes did not match:
+- class_embed.0.bias: found shape torch.Size([91]) in the checkpoint and torch.Size([56]) in the model instantiated
+- class_embed.0.weight: found shape torch.Size([91, 256]) in the checkpoint and torch.Size([56, 256]) in the model instantiated
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/albumentations/core/validation.py:114: UserWarning: ShiftScaleRotate is a special case of Affine transform. Please use Affine transform instead.
+  original_init(self, **validated_kwargs)
+/home/dr6050/DSCI-601-Wildlife/turbine_processing/transforms_detr.py:170: UserWarning: Argument(s) 'var_limit' are not valid for transform GaussNoise
+  A.GaussNoise(var_limit=(10.0, 30.0), p=1.0),
+/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/albumentations/core/composition.py:331: UserWarning: Got processor for bboxes, but no transform to process it.
+  self._set_keys()
+Epoch   1/400 Train:   0%|          | 0/1867 [00:00<?, ?batch/s] Epoch   1/400 Train:   0%|          | 0/1867 [00:53<?, ?batch/s] 
+Traceback (most recent call last):
+  File "/home/dr6050/DSCI-601-Wildlife/modeling/detr/train_detr.py", line 405, in <module>
+    main()
+  File "/home/dr6050/DSCI-601-Wildlife/modeling/detr/train_detr.py", line 400, in main
+    trainer.train()
+  File "/home/dr6050/DSCI-601-Wildlife/modeling/detr/train_detr.py", line 294, in train
+    train_loss = self.train_one_epoch(epoch)
+  File "/home/dr6050/DSCI-601-Wildlife/modeling/detr/train_detr.py", line 183, in train_one_epoch
+    outputs = self.model(pixel_values=pixel_values, labels=targets)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/models/deformable_detr/modeling_deformable_detr.py", line 1806, in forward
+    outputs = self.model(
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/models/deformable_detr/modeling_deformable_detr.py", line 1582, in forward
+    encoder_outputs = self.encoder(
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/models/deformable_detr/modeling_deformable_detr.py", line 1086, in forward
+    layer_outputs = encoder_layer(
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/modeling_layers.py", line 94, in __call__
+    return super().__call__(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/models/deformable_detr/modeling_deformable_detr.py", line 768, in forward
+    hidden_states, attn_weights = self.self_attn(
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/models/deformable_detr/modeling_deformable_detr.py", line 579, in forward
+    output = self.attn(
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/dr6050/DSCI-601-Wildlife/.env/lib64/python3.9/site-packages/transformers/models/deformable_detr/modeling_deformable_detr.py", line 103, in forward
+    (torch.stack(sampling_value_list, dim=-2).flatten(-2) * attention_weights)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 4.35 GiB. GPU 0 has a total capacity of 39.38 GiB of which 1.79 GiB is free. Including non-PyTorch memory, this process has 37.56 GiB memory in use. Of the allocated memory 35.18 GiB is allocated by PyTorch, and 1.89 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

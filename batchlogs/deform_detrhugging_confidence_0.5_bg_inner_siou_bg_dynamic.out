@@ -1,0 +1,175 @@
+✅ Successfully patched Hugging Face DETR to use Inner-SIoU Loss (Ratio=1.25)
+
+[INFO] Initializing Architecture: DEFORMABLE_DETR from SenseTime/deformable-detr
+loading annotations into memory...
+Done (t=0.34s)
+creating index...
+index created!
+loading annotations into memory...
+Done (t=0.05s)
+creating index...
+index created!
+loading annotations into memory...
+Done (t=0.05s)
+creating index...
+index created!
+
+======================================================================
+Adaptive DETR Sampler - Class Distribution
+======================================================================
+Background images: 27230
+Initial mode: equal
+Adaptation rate: 0.3
+
+Class weights:
+  Class  1 (red_tailed_hawk               ):   70 images, weight=0.0185
+  Class  2 (red_winged_blackbird          ):  132 images, weight=0.0185
+  Class  3 (ovenbird                      ):   17 images, weight=0.0185
+  Class  4 (red_headed_woodpecker         ):  109 images, weight=0.0185
+  Class  5 (american_woodcock             ):   57 images, weight=0.0185
+  Class  6 (black_crowned_night_heron     ):   85 images, weight=0.0185
+  Class  7 (northern_flicker              ):  111 images, weight=0.0185
+  Class  8 (eastern_red_bat               ):  106 images, weight=0.0185
+  Class  9 (black_tern                    ):   98 images, weight=0.0185
+  Class 10 (ring_necked_pheasant          ):   95 images, weight=0.0185
+  Class 11 (american_robin                ):   69 images, weight=0.0185
+  Class 12 (sharp_tailed_grouse           ):   45 images, weight=0.0185
+  Class 13 (silver_haired_bat             ):   86 images, weight=0.0185
+  Class 14 (northern_shoveler             ):   86 images, weight=0.0185
+  Class 15 (mallard                       ):   66 images, weight=0.0185
+  Class 16 (eastern_bluebird              ):   74 images, weight=0.0185
+  Class 17 (tree_swallow                  ):   39 images, weight=0.0185
+  Class 18 (common_merganser              ):   12 images, weight=0.0185
+  Class 19 (peregrine_falcon              ):   77 images, weight=0.0185
+  Class 20 (yellow_bellied_sapsucker      ):   44 images, weight=0.0185
+  Class 21 (brewers_blackbird             ):   29 images, weight=0.0185
+  Class 22 (herring_gull                  ):   87 images, weight=0.0185
+  Class 23 (ferruginous_hawk              ):   87 images, weight=0.0185
+  Class 24 (hoary_bat                     ):   70 images, weight=0.0185
+  Class 25 (little_brown_bat              ):   71 images, weight=0.0185
+  Class 26 (big_brown_bat                 ):   21 images, weight=0.0185
+  Class 27 (pied_billed_grebe             ):   82 images, weight=0.0185
+  Class 28 (bufflehead                    ):   54 images, weight=0.0185
+  Class 29 (rock_pigeon                   ):   63 images, weight=0.0185
+  Class 30 (coopers_hawk                  ):   62 images, weight=0.0185
+  Class 31 (american_coot                 ):   80 images, weight=0.0185
+  Class 32 (lesser_yellowlegs             ):   80 images, weight=0.0185
+  Class 33 (willet                        ):   57 images, weight=0.0185
+  Class 34 (upland_sandpiper              ):   59 images, weight=0.0185
+  Class 35 (brown_headed_cowbird          ):   61 images, weight=0.0185
+  Class 36 (other_bat                     ):    5 images, weight=0.0185
+  Class 37 (great_horned_owl              ):   88 images, weight=0.0185
+  Class 38 (bobolink                      ):   44 images, weight=0.0185
+  Class 39 (yellow_headed_blackbird       ):   21 images, weight=0.0185
+  Class 40 (northern_flicker_yellow_shafted):    2 images, weight=0.0185
+  Class 41 (cedar_waxwing                 ):    8 images, weight=0.0185
+  Class 42 (snow_goose                    ):   32 images, weight=0.0185
+  Class 43 (greater_white_fronted_goose   ):   22 images, weight=0.0185
+  Class 45 (chestnut_collared_longspur    ):    5 images, weight=0.0185
+  Class 46 (mourning_dove                 ):   11 images, weight=0.0185
+  Class 47 (house_sparrow                 ):    6 images, weight=0.0185
+  Class 48 (franklins_gull                ):   14 images, weight=0.0185
+  Class 49 (white_throated_sparrow        ):   10 images, weight=0.0185
+  Class 50 (dark_eyed_junco               ):   10 images, weight=0.0185
+  Class 51 (barn_swallow                  ):    6 images, weight=0.0185
+  Class 52 (other_songbird                ):    1 images, weight=0.0185
+  Class 53 (harriss_sparrow               ):   12 images, weight=0.0185
+  Class 54 (american_bittern              ):    9 images, weight=0.0185
+  Class 55 (unknown                       ):    1 images, weight=0.0185
+======================================================================
+
+
+======================================================================
+✓ USING ADAPTIVE SAMPLER
+======================================================================
+  Initial mode     : equal
+  Adaptation rate  : 0.3
+  Min weight       : 0.02
+  Max weight       : 5.0
+  Epoch size       : 29865
+======================================================================
+
+
+======================================================================
+Adaptive DETR Sampler - Class Distribution
+======================================================================
+Background images: 27230
+Initial mode: equal
+Adaptation rate: 0.3
+
+Class weights:
+  Class  1 (red_tailed_hawk               ):   70 images, weight=0.0185
+  Class  2 (red_winged_blackbird          ):  132 images, weight=0.0185
+  Class  3 (ovenbird                      ):   17 images, weight=0.0185
+  Class  4 (red_headed_woodpecker         ):  109 images, weight=0.0185
+  Class  5 (american_woodcock             ):   57 images, weight=0.0185
+  Class  6 (black_crowned_night_heron     ):   85 images, weight=0.0185
+  Class  7 (northern_flicker              ):  111 images, weight=0.0185
+  Class  8 (eastern_red_bat               ):  106 images, weight=0.0185
+  Class  9 (black_tern                    ):   98 images, weight=0.0185
+  Class 10 (ring_necked_pheasant          ):   95 images, weight=0.0185
+  Class 11 (american_robin                ):   69 images, weight=0.0185
+  Class 12 (sharp_tailed_grouse           ):   45 images, weight=0.0185
+  Class 13 (silver_haired_bat             ):   86 images, weight=0.0185
+  Class 14 (northern_shoveler             ):   86 images, weight=0.0185
+  Class 15 (mallard                       ):   66 images, weight=0.0185
+  Class 16 (eastern_bluebird              ):   74 images, weight=0.0185
+  Class 17 (tree_swallow                  ):   39 images, weight=0.0185
+  Class 18 (common_merganser              ):   12 images, weight=0.0185
+  Class 19 (peregrine_falcon              ):   77 images, weight=0.0185
+  Class 20 (yellow_bellied_sapsucker      ):   44 images, weight=0.0185
+  Class 21 (brewers_blackbird             ):   29 images, weight=0.0185
+  Class 22 (herring_gull                  ):   87 images, weight=0.0185
+  Class 23 (ferruginous_hawk              ):   87 images, weight=0.0185
+  Class 24 (hoary_bat                     ):   70 images, weight=0.0185
+  Class 25 (little_brown_bat              ):   71 images, weight=0.0185
+  Class 26 (big_brown_bat                 ):   21 images, weight=0.0185
+  Class 27 (pied_billed_grebe             ):   82 images, weight=0.0185
+  Class 28 (bufflehead                    ):   54 images, weight=0.0185
+  Class 29 (rock_pigeon                   ):   63 images, weight=0.0185
+  Class 30 (coopers_hawk                  ):   62 images, weight=0.0185
+  Class 31 (american_coot                 ):   80 images, weight=0.0185
+  Class 32 (lesser_yellowlegs             ):   80 images, weight=0.0185
+  Class 33 (willet                        ):   57 images, weight=0.0185
+  Class 34 (upland_sandpiper              ):   59 images, weight=0.0185
+  Class 35 (brown_headed_cowbird          ):   61 images, weight=0.0185
+  Class 36 (other_bat                     ):    5 images, weight=0.0185
+  Class 37 (great_horned_owl              ):   88 images, weight=0.0185
+  Class 38 (bobolink                      ):   44 images, weight=0.0185
+  Class 39 (yellow_headed_blackbird       ):   21 images, weight=0.0185
+  Class 40 (northern_flicker_yellow_shafted):    2 images, weight=0.0185
+  Class 41 (cedar_waxwing                 ):    8 images, weight=0.0185
+  Class 42 (snow_goose                    ):   32 images, weight=0.0185
+  Class 43 (greater_white_fronted_goose   ):   22 images, weight=0.0185
+  Class 45 (chestnut_collared_longspur    ):    5 images, weight=0.0185
+  Class 46 (mourning_dove                 ):   11 images, weight=0.0185
+  Class 47 (house_sparrow                 ):    6 images, weight=0.0185
+  Class 48 (franklins_gull                ):   14 images, weight=0.0185
+  Class 49 (white_throated_sparrow        ):   10 images, weight=0.0185
+  Class 50 (dark_eyed_junco               ):   10 images, weight=0.0185
+  Class 51 (barn_swallow                  ):    6 images, weight=0.0185
+  Class 52 (other_songbird                ):    1 images, weight=0.0185
+  Class 53 (harriss_sparrow               ):   12 images, weight=0.0185
+  Class 54 (american_bittern              ):    9 images, weight=0.0185
+  Class 55 (unknown                       ):    1 images, weight=0.0185
+======================================================================
+
+📊 TensorBoard logging to: runs/detr_adapt_equal_dynBG_2026-03-31_07-43-01
+   (Run 'tensorboard --logdir=runs' to view)
+======================================================================
+DETR Training with Adaptive Sampling
+======================================================================
+  Training samples   : 29865
+  Validation samples : 6399
+  Test samples       : 6401
+  Epochs             : 400
+  Batch size         : 16
+  Learning rate      : 1e-05
+  Eval every         : 5 epoch(s)
+  Adaptive sampling  : True
+======================================================================
+
+
+============================================================
+Epoch 1 / 400
+============================================================

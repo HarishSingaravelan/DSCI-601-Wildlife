@@ -3,7 +3,7 @@
 
 training:
   num_epochs: 400              
-  batch_size: 8 
+  batch_size: 4 
   num_workers: 34
   learning_rate: 0.00001        
   weight_decay: 0.0001
@@ -15,7 +15,7 @@ training:
   patience: 50   # Stop if no improvement for N evaluations
   
   device: "cuda"
-  output_model_path: "detr_turbine_detection_deformable_run.pth"
+  output_model_path: "deformable_model.pth"
 
   # Evaluation
   eval_every_n_epochs: 5      # Evaluate less frequently (dataset is larger)
@@ -23,19 +23,19 @@ training:
   
 
   # Checkpointing
-  checkpoint_dir: "checkpoints/deformable_run"
+  checkpoint_dir: "checkpoints/deformable"
   save_checkpoint_every: 10
 
   # Resume from checkpoint
-  resume_checkpoint: null  # set null if starting fresh
+  resume_checkpoint: null # set null if starting fresh
 
 evaluation:
   compute_pr_curve: true
   compute_confusion_matrix: true
-  confidence_threshold: 0.2   
+  confidence_threshold: 0.1   
   iou_threshold: 0.5
   save_plots: true
-  plots_dir: "metrics/evaluation_plots__deformable_run/"
+  plots_dir: "metrics/evaluation_plots_deformable/"
   show_plots: false
 
 data:
@@ -154,8 +154,8 @@ model:
 
                     
 
-  architecture: "deformable_detr"               # Options: "standard_detr" or "deformable_detr"
-  pretrained_model: "SenseTime/deformable-detr" # Options: "facebook/detr-resnet-50" or "SenseTime/deformable-detr"
+  architecture: "deformable_detr"               # Options: "standard_detr" or "deformable_detr" or "dfine"
+  pretrained_model: "SenseTime/deformable-detr" # Options: "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
 
 
 

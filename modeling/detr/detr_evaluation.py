@@ -88,9 +88,13 @@ class DETREvaluator:
         correctly_silent_images = 0
         hallucinations_on_empty = 0
 
-        for batch_idx, (pixel_values, targets) in enumerate(self.data_loader):
+        for batch_idx, (pixel_values, pixel_mask, targets) in enumerate(self.data_loader):
+            # Move both the images and the mask to the GPU
             pixel_values = pixel_values.to(self.device)
-            outputs      = self.model(pixel_values=pixel_values)
+            pixel_mask = pixel_mask.to(self.device)
+            
+            # Pass BOTH into the model
+            outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask)
 
             # --- BACKGROUND CHECK (Raw Logits Analysis) ---
             # Check probabilities before post-processing filters them out

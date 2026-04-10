@@ -143,3 +143,9 @@ runs/
 turbine_split/
 
 *.ps1
+
+metrics/
+
+checkpoints/
+
+batchlogs/

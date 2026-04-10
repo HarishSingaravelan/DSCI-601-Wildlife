@@ -167,7 +167,8 @@ def get_train_transform_detr_medium():
         # Blur/noise
         A.OneOf([
             A.GaussianBlur(blur_limit=(3, 5), p=1.0),
-            A.GaussNoise(var_limit=(10.0, 30.0), p=1.0),
+            # FIXED: Changed var_limit to var_range to match Albumentations updates
+            A.GaussNoise(var_range=(10.0, 30.0), p=1.0),
         ], p=0.2),
         
         ToTensorV2()

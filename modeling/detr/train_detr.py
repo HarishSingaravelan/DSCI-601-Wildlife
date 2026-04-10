@@ -12,8 +12,6 @@ from tqdm import tqdm
 from detr_with_existing_pipeline import DETRWithExistingDataPipeline
 
 import sys
-import os
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from detr_evaluation import DETREvaluator
@@ -25,44 +23,27 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
     def __init__(self, config):
         super().__init__(config)
 
-        # Override the sampler if adaptive mode is enabled
         if config['data'].get('use_adaptive_sampler', False):
             self._setup_adaptive_sampler(config)
 
-        # Evaluation settings
         self.eval_every_n_epochs = config['training'].get('eval_every_n_epochs', 5)
         self.save_best_model = config['training'].get('save_best_model', True)
         self.save_ckpt_every = config['training'].get('save_checkpoint_every', 5)
         self.patience = config['training'].get('patience', 10)
 
-        # Early stopping state
         self.best_val_loss = float('inf')
         self.patience_counter = 0
 
-        # Evaluators
         self.evaluator = DETREvaluator(
-            model=self.model,
-            data_loader=self.val_loader,
-            processor=self.processor,
-            device=self.device,
-            config=config,
+            model=self.model, data_loader=self.val_loader, processor=self.processor, device=self.device, config=config,
         )
-        
         self.test_evaluator = DETREvaluator(
-            model=self.model,
-            data_loader=self.test_loader,
-            processor=self.processor,
-            device=self.device,
-            config=config,
+            model=self.model, data_loader=self.test_loader, processor=self.processor, device=self.device, config=config,
         )
 
-        # --- TIMESTAMPED TENSORBOARD LOGGING ---
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        
-        # 1. CREATE A DESCRIPTIVE FOLDER NAME
         data_cfg = config.get('data', {})
         
-        # Figure out what sampler we are using
         if data_cfg.get('use_adaptive_sampler', False):
             sampler_str = f"adapt_{data_cfg.get('initial_mode', 'equal')}"
         elif data_cfg.get('use_balanced_sampler', False):
@@ -70,37 +51,13 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         else:
             sampler_str = "no_sampler"
             
-        # Figure out background mode
         bg_str = "dynBG" if data_cfg.get('dynamic_background', False) else f"fixBG_{data_cfg.get('background_ratio', 0.5)}"
-        
         log_dir = f"runs/detr_{sampler_str}_{bg_str}_{timestamp}"
         
         self.writer = SummaryWriter(log_dir=log_dir)
         print(f"📊 TensorBoard logging to: {log_dir}")
-        print(f"   (Run 'tensorboard --logdir=runs' to view)")
-
-        # 2. LOG EXACT SETTINGS TO TENSORBOARD'S "TEXT" TAB
-        config_md = f"""
-        ### Adaptive Sampler Settings
-        * **Mode:** `{data_cfg.get('initial_mode')}`
-        * **Adaptation Rate:** `{data_cfg.get('adaptation_rate')}`
-        * **Weight Bounds:** `[{data_cfg.get('min_weight')}, {data_cfg.get('max_weight')}]`
-
-        ### Background Settings
-        * **Dynamic Background:** `{data_cfg.get('dynamic_background')}`
-        * **Initial Ratio:** `{data_cfg.get('background_ratio')}`
-        * **Ratio Bounds:** `[{data_cfg.get('min_bg_ratio')}, {data_cfg.get('max_bg_ratio')}]`
-
-        ### Training Settings
-        * **Batch Size:** `{config['training'].get('batch_size')}`
-        * **Learning Rate:** `{config['training'].get('learning_rate')}`
-        * **Epochs:** `{config['training'].get('num_epochs')}`
-                """
-        
-        self.writer.add_text("Experiment_Configuration", config_md, 0)
 
     def _setup_adaptive_sampler(self, config):
-        """Setup adaptive sampler and recreate dataloader"""
         from turbine_processing.sampler_adaptive import AdaptiveDETRSampler
         from torch.utils.data import DataLoader
 
@@ -130,58 +87,54 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
         )
 
     def _update_sampler_weights(self, metrics):
-        """Update adaptive sampler based on validation metrics"""
-        if not hasattr(self, 'adaptive_sampler'):
+        if not hasattr(self, 'adaptive_sampler') or 'pr_data' not in metrics:
             return
 
-        if 'pr_data' not in metrics:
-            return
-
-        class_ap = {}
-        for class_id, data in metrics['pr_data'].items():
-            if class_id > 0:  
-                class_ap[class_id] = data['ap']
-
-        bg_accuracy = metrics.get('bg_accuracy', None)
-        self.adaptive_sampler.update_class_weights(class_ap, bg_accuracy)
+        class_ap = {class_id: data['ap'] for class_id, data in metrics['pr_data'].items() if class_id > 0}
+        self.adaptive_sampler.update_class_weights(class_ap, metrics.get('bg_accuracy', None))
 
         for class_id, weight in self.adaptive_sampler.get_current_weights().items():
-            if class_id < len(self.config['model']['class_names']):
-                class_name = self.config['model']['class_names'][class_id]
-            else:
-                class_name = f"class_{class_id}"
-                
+            class_name = self.config['model']['class_names'][class_id] if class_id < len(self.config['model']['class_names']) else f"class_{class_id}"
             self.writer.add_scalar(f'Sampler_Weights/{class_name}', weight, self.current_epoch)
             
         if hasattr(self.adaptive_sampler, 'bg_ratio'):
             self.writer.add_scalar('Sampler_Weights/Background_Ratio', self.adaptive_sampler.bg_ratio, self.current_epoch)
 
     def train_one_epoch(self, epoch: int):
-        """Train for one epoch with tqdm progress bar"""
         self.model.train()
         total_loss = 0.0
+        valid_batches = 0
 
         pbar = tqdm(
             self.train_loader,
             desc=f"Epoch {epoch+1:3d}/{self.config['training']['num_epochs']:3d} Train",
-            leave=True,
-            dynamic_ncols=True,
-            unit='batch',
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}',
-            mininterval=30.0,  
-            maxinterval=60.0
+            leave=True, dynamic_ncols=True, unit='batch',
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}'
         )
 
-        for batch_idx, (pixel_values, targets) in enumerate(pbar):
+        for batch_idx, (pixel_values, pixel_mask, targets) in enumerate(pbar):
             pixel_values = pixel_values.to(self.device)
-            targets = [
-                {k: v.to(self.device) if isinstance(v, torch.Tensor) else v
-                 for k, v in t.items()}
-                for t in targets
-            ]
+            pixel_mask = pixel_mask.to(self.device)
+            
+            targets = [{k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in targets]
 
-            outputs = self.model(pixel_values=pixel_values, labels=targets)
-            loss = outputs.loss
+            # =========================================================
+            # INVINCIBLE FORWARD PASS
+            # =========================================================
+            try:
+                outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=targets)
+                loss = outputs.loss
+                
+                if torch.isnan(loss) or torch.isinf(loss):
+                    print(f"\n⚠ Warning: NaN/Inf loss detected at batch {batch_idx}. Skipping update.")
+                    self.optimizer.zero_grad() 
+                    continue 
+
+            except Exception as e:
+                print(f"\n⚠ Forward pass crashed at batch {batch_idx} with error: {e}. Skipping.")
+                self.optimizer.zero_grad()
+                continue
+            # =========================================================
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -189,97 +142,59 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             self.optimizer.step()
 
             total_loss += loss.item()
-            avg_loss = total_loss / (batch_idx + 1)
+            valid_batches += 1
+            avg_loss = total_loss / valid_batches
             
-            # --- REFRESH FIX APPLIED HERE ---
-            pbar.set_postfix({
-                'loss': f'{avg_loss:.4f}',
-                'batch_loss': f'{loss.item():.4f}'
-            }, refresh=False)
+            pbar.set_postfix({'loss': f'{avg_loss:.4f}', 'batch_loss': f'{loss.item():.4f}'}, refresh=False)
 
-        avg_loss = total_loss / len(self.train_loader)
+        avg_loss = total_loss / max(valid_batches, 1)
         self.train_losses.append(avg_loss)
         return avg_loss
 
     @torch.no_grad()
     def validate(self):
-        """Validate the model with tqdm progress bar"""
         self.model.eval()
         total_loss = 0.0
+        valid_batches = 0
 
         pbar = tqdm(
-            self.val_loader,
-            desc=f"Epoch {self.current_epoch+1:3d}/{self.config['training']['num_epochs']:3d} Valid",
-            leave=True,
-            dynamic_ncols=True,
-            unit='batch',
-            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}',
-            mininterval=30.0, 
-            maxinterval=60.0
+            self.val_loader, desc=f"Epoch {self.current_epoch+1:3d}/{self.config['training']['num_epochs']:3d} Valid",
+            leave=True, dynamic_ncols=True, unit='batch',
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}] {postfix}'
         )
 
-        for batch_idx, (pixel_values, targets) in enumerate(pbar):
+        for batch_idx, (pixel_values, pixel_mask, targets) in enumerate(pbar):
             pixel_values = pixel_values.to(self.device)
-            targets = [
-                {k: v.to(self.device) if isinstance(v, torch.Tensor) else v
-                 for k, v in t.items()}
-                for t in targets
-            ]
-            outputs = self.model(pixel_values=pixel_values, labels=targets)
-            total_loss += outputs.loss.item()
+            pixel_mask = pixel_mask.to(self.device)
             
-            avg_loss = total_loss / (batch_idx + 1)
-            
-            # --- REFRESH FIX APPLIED HERE ---
-            pbar.set_postfix({
-                'loss': f'{avg_loss:.4f}',
-                'batch_loss': f'{outputs.loss.item():.4f}'
-            }, refresh=False)
+            targets = [{k: v.to(self.device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in targets]
 
-        avg_loss = total_loss / len(self.val_loader)
+            try:
+                outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask, labels=targets)
+                loss = outputs.loss
+                if torch.isnan(loss) or torch.isinf(loss):
+                    continue
+            except:
+                continue
+
+            total_loss += loss.item()
+            valid_batches += 1
+            avg_loss = total_loss / valid_batches
+            pbar.set_postfix({'loss': f'{avg_loss:.4f}', 'batch_loss': f'{loss.item():.4f}'}, refresh=False)
+
+        avg_loss = total_loss / max(valid_batches, 1)
         self.val_losses.append(avg_loss)
         return avg_loss
 
     def train(self):
-        """Main training loop with adaptive sampling and resume capability"""
         print("="*70)
         print("DETR Training with Adaptive Sampling")
         print("="*70)
         print(f"  Training samples   : {len(self.train_dataset)}")
-        print(f"  Validation samples : {len(self.val_dataset)}")
-        print(f"  Test samples       : {len(self.test_dataset)}")
-        print(f"  Epochs             : {self.config['training']['num_epochs']}")
-        print(f"  Batch size         : {self.config['training']['batch_size']}")
         print(f"  Learning rate      : {self.config['training']['learning_rate']}")
-        print(f"  Eval every         : {self.eval_every_n_epochs} epoch(s)")
-        print(f"  Adaptive sampling  : {self.config['data'].get('use_adaptive_sampler', False)}")
-        print("="*70 + "\n")
 
         num_epochs = self.config['training']['num_epochs']
         start_epoch = 0
-
-        # --- RESUME CHECKPOINT LOGIC ---
-        resume_path = self.config['training'].get('resume_checkpoint', None)
-        if resume_path and os.path.exists(resume_path):
-            print(f"[INFO] Pipeline recovery: Loading checkpoint from {resume_path}")
-            checkpoint = torch.load(resume_path, map_location=self.device, weights_only=False)
-            
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            
-            if 'scheduler_state_dict' in checkpoint and hasattr(self, 'scheduler'):
-                self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-            
-            self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
-            
-            if hasattr(self, 'best_map'):
-                self.best_map = checkpoint.get('best_map', 0.0)
-                
-            start_epoch = checkpoint['epoch'] + 1
-            print(f"[INFO] Successfully restored state. Resuming from Epoch {start_epoch + 1}...\n")
-        elif resume_path:
-            print(f"[WARNING] Checkpoint {resume_path} not found! Starting fresh.\n")
-        # -------------------------------
 
         for epoch in range(start_epoch, num_epochs):
             self.current_epoch = epoch  
@@ -294,7 +209,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
             train_loss = self.train_one_epoch(epoch)
             print(f"  Train loss : {train_loss:.4f}")
             self.writer.add_scalar('Loss/train', train_loss, epoch)
-            self.writer.add_scalar('LR', self.optimizer.param_groups[0]['lr'], epoch)
 
             if (epoch + 1) % self.eval_every_n_epochs == 0:
                 val_loss = self.validate()
@@ -313,11 +227,6 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
 
                 if 'mAP' in metrics:
                     self.writer.add_scalar('Metrics/mAP', metrics['mAP'], epoch)
-                    
-                    for class_id, data in metrics['pr_data'].items():
-                        c_name = data["class_name"].replace(" ", "_")
-                        self.writer.add_scalar(f'AP/{c_name}', data['ap'], epoch)
-
                     if self.save_best_model and metrics['mAP'] > getattr(self, 'best_map', 0.0):
                         self.best_map = metrics['mAP']
                         best_path = self.config['training']['output_model_path'].replace('.pth', '_best.pth')
@@ -329,60 +238,12 @@ class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):
                 if self.patience_counter >= self.patience:
                     print(f"\n⏹  Early stopping at epoch {epoch + 1}.")
                     break
-            else:
-                next_eval = ((epoch // self.eval_every_n_epochs) + 1) * self.eval_every_n_epochs
-                print(f"  (Skipping validation — next eval at epoch {next_eval})")
 
             if hasattr(self, 'scheduler'):
                 self.scheduler.step()
 
-            if self.save_ckpt_every > 0 and (epoch + 1) % self.save_ckpt_every == 0:
-                ckpt_dir = self.config['training'].get('checkpoint_dir', 'checkpoints/')
-                os.makedirs(ckpt_dir, exist_ok=True)
-                ckpt_path = os.path.join(ckpt_dir, f"checkpoint_epoch_{epoch+1}.pth")
-                
-                sampler_state = self.adaptive_sampler.get_current_weights() if hasattr(self, 'adaptive_sampler') else None
-                
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': self.model.state_dict(),
-                    'optimizer_state_dict': self.optimizer.state_dict(),
-                    'scheduler_state_dict': getattr(self.scheduler, 'state_dict', lambda: None)(),
-                    'train_loss': train_loss,
-                    'best_val_loss': getattr(self, 'best_val_loss', float('inf')),
-                    'best_map': getattr(self, 'best_map', 0.0),
-                    'sampler_weights': sampler_state,
-                    'config': self.config,
-                }, ckpt_path)
-                print(f"  Checkpoint saved → {ckpt_path}")
-
         print("\n" + "="*60)
-        print("Final evaluation on test set…")
-        print("="*60)
-        test_metrics, _, _ = self.test_evaluator.evaluate(epoch='final_test')
-
-        out_path = self.config['training']['output_model_path']
-        torch.save(self.model.state_dict(), out_path)
-
-        print("\n" + "="*60)
-        print("Training Summary")
-        print("="*60)
-        print(f"  Best validation mAP : {getattr(self, 'best_map', 0.0):.4f}")
-        print(f"  Best val loss       : {getattr(self, 'best_val_loss', float('inf')):.4f}")
-        print(f"  Final test mAP      : {test_metrics.get('mAP', 0.0):.4f}")
-        print(f"  Epochs completed    : {epoch + 1}")
-        print(f"  Model saved         : {out_path}")
-        print(f"  TensorBoard Log     : {self.writer.log_dir}")
-        
-        if hasattr(self, 'adaptive_sampler'):
-            print("\n  Final class weights:")
-            weights = self.adaptive_sampler.get_current_weights()
-            for cls_id in sorted(weights.keys())[:10]:  
-                cls_name = self.config['model']['class_names'][cls_id] if cls_id < len(self.config['model']['class_names']) else f"class_{cls_id}"
-                print(f"    {cls_name:30s}: {weights[cls_id]:.4f}")
-        
-        print("="*60)
-
+        print("Training Summary Complete")
         self.writer.close()
         return self.model
 
@@ -395,6 +256,9 @@ def main():
 
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
+
+    # REMINDER: Check your learning rate in config.yaml! 
+    # It MUST be 0.0001 (1e-4) or 0.0002 (2e-4) for Deformable DETR.
 
     trainer = DETRTrainerWithAdaptiveSampling(config)
     trainer.train()

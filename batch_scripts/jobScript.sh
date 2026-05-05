@@ -4,10 +4,10 @@
 #SBATCH --partition=tier3 
 
 #SBATCH --job-name=wildlife_adam
-#SBATCH --output=batchlogs/deformable.out
-#SBATCH --error=batchlogs/deformable.err
+#SBATCH --output=batchlogs/dfine2_detr.out
+#SBATCH --error=batchlogs/dfine2_detr.err
 #SBATCH --mail-type=ALL
-#SBATCH --time=4-00:00:00
+#SBATCH --time=8-00:00:00
 #SBATCH --mem=256g
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

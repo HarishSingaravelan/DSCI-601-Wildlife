@@ -10,7 +10,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from detr_with_existing_pipeline import DETRWithExistingDataPipeline
+from modeling.detr.detr_with_existing_pipeline import DETRWithExistingDataPipeline
 
 
 def diagnose_targets(config_path='config/config.yaml'):

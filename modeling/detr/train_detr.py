@@ -9,12 +9,12 @@ import os
 from datetime import datetime  
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from detr_with_existing_pipeline import DETRWithExistingDataPipeline
+from modeling.detr.detr_with_existing_pipeline import DETRWithExistingDataPipeline
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from detr_evaluation import DETREvaluator
+from modeling.detr.detr_evaluation import DETREvaluator
 
 
 class DETRTrainerWithAdaptiveSampling(DETRWithExistingDataPipeline):

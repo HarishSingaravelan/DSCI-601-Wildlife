@@ -6,10 +6,19 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from PIL import Image
-from transformers import DetrImageProcessor, DetrForObjectDetection
+
+# Import the exact models from your training script!
+from transformers import (
+    DetrForObjectDetection, 
+    DetrImageProcessor,
+    DFineForObjectDetection,
+    AutoImageProcessor,
+    DeformableDetrImageProcessor,
+    DeformableDetrForObjectDetection
+)
 
 # ==========================================
-# 1. SETTINGS (CHANGE THESE)
+# 1. SETTINGS 
 # ==========================================
 IMAGE_PATH = "Sample_images/DJI_0677.JPG"                               
 MODEL_WEIGHTS = "checkpoints/dfine/checkpoint_epoch_260.pth" 
@@ -20,9 +29,14 @@ CONFIDENCE_THRESHOLD = 0.50
 def load_config_and_classes(yaml_path):
     with open(yaml_path, 'r') as f:
         config = yaml.safe_load(f)
+    
+    # Extract architecture type and class info
+    arch = config['model'].get('architecture', 'standard_detr')
+    model_name = config['model'].get('pretrained_model', 'facebook/detr-resnet-50')
     class_names = config['model']['class_names']
     num_classes = config['model']['num_object_classes']
-    return class_names, num_classes
+    
+    return arch, model_name, class_names, num_classes
 
 def load_ground_truth(json_path, img_width, img_height):
     """Reads the JSON file and converts normalized coordinates to absolute pixels"""
@@ -37,11 +51,9 @@ def load_ground_truth(json_path, img_width, img_height):
     for carcass in data.get("carcasses", []):
         locs = carcass.get("location", [])
         if len(locs) >= 2:
-            # Extract normalized coordinates
             xs = [float(loc["x"]) for loc in locs]
             ys = [float(loc["y"]) for loc in locs]
             
-            # Convert to absolute pixels
             xmin, xmax = min(xs) * img_width, max(xs) * img_width
             ymin, ymax = min(ys) * img_height, max(ys) * img_height
             
@@ -54,22 +66,41 @@ def run_inference():
     total_start = time.time()
     
     print("[1/6] Loading configuration...")
-    class_names, num_classes = load_config_and_classes(CONFIG_PATH)
+    arch, model_name, class_names, num_classes = load_config_and_classes(CONFIG_PATH)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    id2label = {i: name for i, name in enumerate(class_names)}
+    label2id = {name: i for i, name in enumerate(class_names)}
+    
+    print(f"      --> Architecture selected: {arch.upper()}")
     print(f"      --> Using device: {device.type.upper()}")
 
-    print("[2/6] Loading base model and processor...")
-    processor = DetrImageProcessor.from_pretrained("facebook/detr-resnet-50")
-    model = DetrForObjectDetection.from_pretrained(
-        "facebook/detr-resnet-50",
-        num_labels=num_classes,
-        ignore_mismatched_sizes=True
-    )
-    
+    print("[2/6] Loading dynamic model and processor...")
+    # THIS IS THE FIX: Dynamically building the model just like your training script
+    if arch == 'dfine':
+        processor = AutoImageProcessor.from_pretrained(model_name)
+        model = DFineForObjectDetection.from_pretrained(
+            model_name, id2label=id2label, label2id=label2id, ignore_mismatched_sizes=True
+        )
+    elif arch == 'deformable_detr':
+        processor = DeformableDetrImageProcessor.from_pretrained(model_name, do_convert_annotations=True)
+        model = DeformableDetrForObjectDetection.from_pretrained(
+            model_name, num_labels=num_classes, ignore_mismatched_sizes=True
+        )
+    else:
+        processor = DetrImageProcessor.from_pretrained(model_name, do_convert_annotations=True)
+        model = DetrForObjectDetection.from_pretrained(
+            model_name, num_labels=num_classes, ignore_mismatched_sizes=True
+        )
+        
     print("[3/6] Injecting custom trained weights...")
     checkpoint = torch.load(MODEL_WEIGHTS, map_location=device, weights_only=False)
+    
+    # Handle different checkpoint save formats
     if "model_state_dict" in checkpoint:
         state_dict = checkpoint["model_state_dict"]
+    elif "model" in checkpoint:
+        state_dict = checkpoint["model"]
     else:
         state_dict = checkpoint
         
@@ -81,6 +112,7 @@ def run_inference():
     step_start = time.time()
     image = Image.open(IMAGE_PATH).convert("RGB")
     img_width, img_height = image.size
+    
     inputs = processor(images=image, return_tensors="pt").to(device)
     print(f"      --> Preprocessing finished in {time.time() - step_start:.2f} seconds.")
 
@@ -92,11 +124,13 @@ def run_inference():
 
     print("[6/6] Post-processing and drawing boxes...")
     target_sizes = torch.tensor([[img_height, img_width]])
+    
+    # HuggingFace standardizes post-processing across all 3 of your architectures!
     results = processor.post_process_object_detection(
         outputs, target_sizes=target_sizes, threshold=CONFIDENCE_THRESHOLD
     )[0]
 
-    # Filter out background (Class 0)
+    # Filter out background (Assuming Class 0 is background based on your confusion matrix)
     keep = results["labels"] > 0
     boxes = results["boxes"][keep]
     scores = results["scores"][keep]
@@ -127,7 +161,9 @@ def run_inference():
         for score, label, box in zip(scores, labels, boxes):
             box_coords = [round(i, 2) for i in box.tolist()]
             xmin, ymin, xmax, ymax = box_coords
-            class_name = class_names[label.item()]
+            
+            # Catch key errors just in case label mapping is off
+            class_name = class_names[label.item()] if label.item() < len(class_names) else f"Class_{label.item()}"
             
             print(f"          - PRED: {class_name:<20} | Conf: {score.item():.2f} | BBox: [Xmin: {xmin}, Ymin: {ymin}, Xmax: {xmax}, Ymax: {ymax}]")
             

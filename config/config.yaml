@@ -3,9 +3,9 @@
 
 training:
   num_epochs: 400              
-  batch_size: 4 
+  batch_size: 34 # 4 for defomable 
   num_workers: 34
-  learning_rate: 0.00001        
+  learning_rate: 0.0001       
   weight_decay: 0.0001
   # Learning rate scheduler
   scheduler_step_size: 200       # Reduce LR every N epochs 
@@ -15,7 +15,7 @@ training:
   patience: 50   # Stop if no improvement for N evaluations
   
   device: "cuda"
-  output_model_path: "deformable_model.pth"
+  output_model_path: "standard_detr_model.pth"
 
   # Evaluation
   eval_every_n_epochs: 5      # Evaluate less frequently (dataset is larger)
@@ -23,7 +23,7 @@ training:
   
 
   # Checkpointing
-  checkpoint_dir: "checkpoints/deformable"
+  checkpoint_dir: "checkpoints/standard_detr/"
   save_checkpoint_every: 10
 
   # Resume from checkpoint
@@ -35,7 +35,7 @@ evaluation:
   confidence_threshold: 0.1   
   iou_threshold: 0.5
   save_plots: true
-  plots_dir: "metrics/evaluation_plots_deformable/"
+  plots_dir: "metrics/evaluation_plots_standard_detr/"
   show_plots: false
 
 data:
@@ -55,7 +55,7 @@ data:
 # Option 1: ADAPTIVE SAMPLER (Recommended for medium-large datasets)
   # Learns optimal class weights from validation performance
   # Starts with initial_mode, then adapts based on per-class AP
-  use_adaptive_sampler: true
+  use_adaptive_sampler: false
 
   # Adaptive sampler settings (only used if use_adaptive_sampler: true)
   initial_mode: 'equal'         # Start mode: 'equal', 'sqrt', or 'log'
@@ -65,7 +65,7 @@ data:
   
   # --- NEW BACKGROUND SETTINGS ---
   background_ratio: 0.20        # Initial background ratio (0.5 = 50%)
-  dynamic_background: true      # Automatically adjust BG ratio based on validation
+  dynamic_background: false      # Automatically adjust BG ratio based on validation
   min_bg_ratio: 0.02            # Never drop below 15% background
   max_bg_ratio: 0.50            # Never exceed 50% background
   
@@ -154,8 +154,8 @@ model:
 
                     
 
-  architecture: "deformable_detr"               # Options: "standard_detr" or "deformable_detr" or "dfine"
-  pretrained_model: "SenseTime/deformable-detr" # Options: "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
+  architecture: "dfine"               # Options: "standard_detr" or "deformable_detr" or "dfine"
+  pretrained_model: "ustc-community/dfine_x_coco" # Options: "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
 
 
 

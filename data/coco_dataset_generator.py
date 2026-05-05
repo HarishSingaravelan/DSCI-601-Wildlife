@@ -5,9 +5,14 @@ from PIL import Image
 from typing import Optional, Tuple, Dict, List
 from tqdm import tqdm  # Added tqdm
 
+
+# For running on sample
+ROOT_DIR = "Sample_images"
+OUTPUT_JSON = "coco_annotations.json"
+
 # --- Configuration ---
-ROOT_DIR = "../../../../../../shared/rc/turbine/Test_2021_SY"
-OUTPUT_JSON = "../../../../../../shared/rc/turbine/coco_annotations_all_classes.json"
+# ROOT_DIR = "../../../../../../shared/rc/turbine/Test_2021_SY"
+# OUTPUT_JSON = "../../../../../../shared/rc/turbine/coco_annotations_all_classes.json"
 
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.tiff')
 ANNOTATION_EXTENSIONS = ('.json', '.xml')

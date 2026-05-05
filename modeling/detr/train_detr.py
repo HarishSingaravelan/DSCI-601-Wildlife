@@ -5,14 +5,14 @@ Automatically adjusts class distribution based on per-class validation performan
 
 import torch
 import yaml
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import os
 from datetime import datetime  
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from modeling.detr.detr_with_existing_pipeline import DETRWithExistingDataPipeline
 
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from modeling.detr.detr_evaluation import DETREvaluator
 

@@ -13,7 +13,7 @@ The project is structured modularly, separating data handling, modeling, optimiz
 This project is properly documented using standard Python docstrings. The automated HTML documentation was generated using [pdoc](https://pdoc.dev/).
 
 **To view the documentation:**
-1. Navigate to the `docs/` folder in this repository.
+1. Navigate to the `doc/` folder in this repository.
 2. Download and open `index.html` in any standard web browser to explore the module and function-level documentation.
 
 **Regenerating the Documentation:**
@@ -22,7 +22,7 @@ If you modify the source code and need to regenerate the HTML documentation loca
 
 ```bash
 pip install pdoc
-PYTHONPATH=. pdoc data/ inference/ modeling/ turbine_processing/ main.py -o docs
+PYTHONPATH=. pdoc data/ inference/ modeling/ turbine_processing/ main.py -o doc
 ```
 
 ---

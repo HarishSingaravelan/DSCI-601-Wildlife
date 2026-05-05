@@ -5,9 +5,9 @@ Automatically adjusts class distribution based on per-class validation performan
 
 import torch
 import yaml
+import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-import os
 from datetime import datetime  
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm

@@ -3,8 +3,8 @@
 
 training:
   num_epochs: 400              
-  batch_size: 34 # 4 for defomable 
-  num_workers: 34
+  batch_size: 4 # 4 for defomable 
+  num_workers: 0 # 34 on A100 0 for local testing
   learning_rate: 0.0001       
   weight_decay: 0.0001
   # Learning rate scheduler
@@ -39,14 +39,26 @@ evaluation:
   show_plots: false
 
 data:
-  train_images_dir: "../../../../shared/rc/turbine"
-  train_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/train/annotations.json"
+  train_images_dir: "."
+  train_ann_file: "turbine_split/train/annotations.json"
 
-  val_images_dir: "../../../../shared/rc/turbine"
-  val_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/val/annotations.json"
+  val_images_dir: "."
+  val_ann_file: "turbine_split/val/annotations.json"
 
-  test_images_dir: "../../../../shared/rc/turbine"
-  test_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/test/annotations.json"
+  test_images_dir: "."
+  test_ann_file: "turbine_split/test/annotations.json"
+
+
+
+# data:
+#   train_images_dir: "../../../../shared/rc/turbine"
+#   train_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/train/annotations.json"
+
+#   val_images_dir: "../../../../shared/rc/turbine"
+#   val_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/val/annotations.json"
+
+#   test_images_dir: "../../../../shared/rc/turbine"
+#   test_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/test/annotations.json"
 
 
   # use_light_augmentation: true

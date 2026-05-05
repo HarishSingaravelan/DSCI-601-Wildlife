@@ -6,7 +6,7 @@ import seaborn as sns
 # ==========================================
 # SETTINGS
 # ==========================================
-CSV_PATH = "metrics/evaluation_plots__full_run_log_sampler_confidence_0.2_bg/evaluation_epoch_305/confusion_matrix_raw.csv" 
+CSV_PATH = "metrics/evaluation_plots_dfine/evaluation_epoch_270/confusion_matrix_raw.csv" 
 FIG_SIZE = (16, 9) # Widescreen PPT format
 # ==========================================
 
@@ -59,7 +59,7 @@ def generate_ppt_confusion_matrix():
     )
     
     # Formatting the axes
-    plt.title("DETR Wildlife Detection - Confusion Matrix (Epoch 305)", fontsize=20, pad=20, weight='bold')
+    plt.title("D-FINE DETR Wildlife Detection - Confusion Matrix (Epoch 270)", fontsize=20, pad=20, weight='bold')
     plt.ylabel('Actual (Ground Truth)', fontsize=14, weight='bold')
     plt.xlabel('Predicted by Model', fontsize=14, weight='bold')
     

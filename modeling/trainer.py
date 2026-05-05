@@ -9,7 +9,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 
-from modeling.coco_eval import evaluate_map50, predictions_to_coco_results
+# from modeling.coco_eval import evaluate_map50, predictions_to_coco_results
 
 
 def _move_to_device(images, targets, device):

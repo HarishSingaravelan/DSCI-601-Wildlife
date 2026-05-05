@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
-from modeling.detr_baseline import DETRBaseline, DETRConfig
+# from modeling.detr_baseline import DETRBaseline, DETRConfig
 
 
 def _build_fasterrcnn(num_classes: int, pretrained: bool = True):

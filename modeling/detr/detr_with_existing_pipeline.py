@@ -80,7 +80,7 @@ def patch_inner_siou_loss():
         return inner_iou - siou_penalty
 
     modeling_detr.generalized_box_iou = inner_siou_matrix
-    print("✅ Successfully patched Hugging Face DETR to use Inner-SIoU Loss")
+    print("Successfully patched Hugging Face DETR to use Inner-SIoU Loss")
 
 # TEMPORARILY DISABLED FOR DEFORMABLE DETR STABILITY
 # patch_inner_siou_loss() 

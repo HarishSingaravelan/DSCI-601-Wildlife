@@ -149,3 +149,5 @@ metrics/
 checkpoints/
 
 batchlogs/
+
+confusion_matrix_ppt.png

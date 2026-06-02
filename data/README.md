@@ -104,13 +104,15 @@ Use the backslash (`\`) to continue the command across multiple lines for better
 Here the location file is for the Remote system. Add you local system or replace it with windows folder location
 
 ```bash
-python data/split_dataset.py \
-    --source_root ../../../shared/rc/turbine \
-    --annotation_file ../../../shared/rc/turbine/coco_annotations_updated.json \
-    --output_root ../../../shared/rc/turbine/turbine_split \
-    --train_ratio 0.7 \
-    --val_ratio 0.15 \
-    --test_ratio 0.15
+python split_dataset_stratified.py \
+  --source_root "../../../../shared/rc/turbine/resized_dataset_new/Test_2021_SY" \
+  --annotation_file "../../../../shared/rc/turbine/resized_dataset_new/coco_annotations_new.json" \
+  --output_root "../../../../shared/rc/turbine/resized_dataset_new/turbine_split_stratified" \
+  --min_images 3 \
+  --bucket_name "unknown" \
+  --train_ratio 0.7 \
+  --val_ratio 0.15 \
+  --test_ratio 0.15
 ```
 
 #### 2. Windows (PowerShell or Command Prompt)
@@ -120,13 +122,15 @@ Use the backtick (`` ` ``) for line continuation in PowerShell, or combine the a
 **PowerShell:**
 
 ```powershell
-python data/split_dataset.py `
-    --source_root . `
-    --annotation_file coco_annotations.json `
-    --output_root turbine_split `
-    --train_ratio 0.7 `
-    --val_ratio 0.15 `
-    --test_ratio 0.15
+python split_dataset_stratified.py `
+  --source_root "../../../../shared/rc/turbine/resized_dataset_new/Test_2021_SY" `
+  --annotation_file "../../../../shared/rc/turbine/resized_dataset_new/coco_annotations_new.json" `
+  --output_root "../../../../shared/rc/turbine/resized_dataset_new/turbine_split_stratified" `
+  --min_images 3 `
+  --bucket_name "unknown" `
+  --train_ratio 0.8 `
+  --val_ratio 0.1 `
+  --test_ratio 0.1 `
 ```
 
 **Command Prompt:**

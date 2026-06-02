@@ -1,18 +1,17 @@
 #!/bin/bash -l
 # Configuration Options
 #SBATCH --account=turbine
-#SBATCH --partition=debug 
+#SBATCH --partition=debug
 
 #SBATCH --job-name=wildlife_adam
-#SBATCH --output=batchlogs/detr/detr_both.out
-#SBATCH --error=batchlogs/detr/detr_both.err
+#SBATCH --output=batchlogs/preprocess_dataset1.out
+#SBATCH --error=batchlogs/preprocess_dataset1.err
 #SBATCH --mail-type=ALL
-#SBATCH --time=1-00:00:00
+#SBATCH --time=0-12:00:00
 #SBATCH --mem=256g
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=34 #16
-#SBATCH --gres=gpu:a100:1
 
 # Load Software
 source /home/hs7569/dsci601/bin/activate
@@ -21,8 +20,8 @@ source /home/hs7569/dsci601/bin/activate
 # cd /home/hs7569/github/DSCI-601-Wildlife || exit 1
 
 export PYTHONPATH=$(pwd)
-export PYTHONDONTWRITEBYTECODE=1
+
 
 # Run training
-python3 modeling/detr/train_detr.py
+python3 data/resize_dataset.py
 # python -m inference.manual_evaluate

@@ -15,6 +15,10 @@ def analyze_annotations(ann_file: str):
 
     with open(ann_file, 'r') as f:
         data = json.load(f)
+    
+    num_images = len(data.get('images', []))
+    print(f"\n IMAGES:")
+    print(f"   Total images: {num_images}")
 
     # ── Categories ────────────────────────────────────────────────
     print("\n CATEGORIES:")

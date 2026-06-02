@@ -1,20 +1,19 @@
 """
-DETR Evaluation Script - FULLY FIXED & BACKGROUND AWARE
-Fixes:
-  1. Lower confidence threshold handling
-  2. GT boxes normalization
-  3. Batch handling
-  4. NEW: Background Image Accuracy & True Negative visualization
+DETR Evaluation Script
+Fixes/Upgrades:
+  1. Integrated torchmetrics MeanAveragePrecision (mAP@0.5, mAP@0.5:0.95, Recall, F1)
+  2. Maintained custom Background Image Accuracy & True Negative visualization
+  3. Maintained Confusion Matrix generation
+  4. Fixed Faster R-CNN label indexing, box scaling, and Chatty Model (confidence thresholding) bugs
+  5. ADDED Scale-Specific Metrics (mAP_Small, mAP_Medium, mAP_Large) for compression analysis
 """
 
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import precision_recall_curve, average_precision_score
-from typing import Dict, List
-from inference.visualization_utils import create_readable_visualizations
 import os
+from sklearn.metrics import precision_recall_curve, average_precision_score
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+from inference.visualization_utils import create_readable_visualizations
 
 
 class DETREvaluator:
@@ -28,14 +27,21 @@ class DETREvaluator:
 
         self.iou_threshold  = config.get('evaluation', {}).get('iou_threshold', 0.5)
         self.conf_threshold = config.get('evaluation', {}).get('confidence_threshold', 0.1)
-        
-        # New threshold specifically for checking "silence" on empty images
-        self.bg_threshold = bg_threshold 
-        
-        self.class_names    = config.get('model', {}).get(
+        self.bg_threshold   = bg_threshold
+
+        self.class_names = config.get('model', {}).get(
             'class_names',
             [f"class_{i}" for i in range(config['model']['num_object_classes'])]
         )
+
+        self.arch = config.get('model', {}).get('architecture', 'standard_detr').lower()
+
+        # TorchMetrics COCO Evaluator
+        self.coco_metric = MeanAveragePrecision(box_format='xyxy', iou_type='bbox', class_metrics=True)
+
+    # ------------------------------------------------------------------
+    # STATIC HELPERS
+    # ------------------------------------------------------------------
 
     @staticmethod
     def box_iou(boxes1, boxes2):
@@ -55,7 +61,7 @@ class DETREvaluator:
 
     @staticmethod
     def normalize_to_pixels(boxes_norm, orig_h, orig_w):
-        """Convert DETR normalized boxes [cx, cy, w, h] to pixel [x1, y1, x2, y2]."""
+        """Convert DETR normalized [cx, cy, w, h] → pixel [x1, y1, x2, y2]."""
         if boxes_norm.numel() == 0:
             return boxes_norm
 
@@ -71,91 +77,184 @@ class DETREvaluator:
 
         return torch.stack([x1, y1, x2, y2], dim=1)
 
+    # ------------------------------------------------------------------
+    # TARGET KEY HELPER
+    # ------------------------------------------------------------------
+
+    def _get_gt_labels(self, target: dict) -> torch.Tensor:
+        """Safely extract ground-truth class labels from a target dict."""
+        if 'class_labels' in target:
+            return target['class_labels'].cpu()
+        if 'labels' in target:
+            return target['labels'].cpu()
+        return torch.empty((0,), dtype=torch.int64)
+
+    def _get_orig_size(self, target: dict, pixel_values: torch.Tensor, idx: int):
+        """Return (orig_h, orig_w) for a single image."""
+        if 'orig_size' in target:
+            return target['orig_size'].tolist()
+        return pixel_values.shape[2], pixel_values.shape[3]
+
+    # ------------------------------------------------------------------
+    # MAIN COLLECTION LOOP
+    # ------------------------------------------------------------------
+
     @torch.no_grad()
     def collect_predictions_and_bg_stats(self):
         """
-        Collects predictions, GT, AND tracks pure background image performance.
-        Returns:
-            predictions, ground_truths, bg_stats (dict)
+        Collect predictions + GT, update TorchMetrics, track background stats.
+        Supports Faster R-CNN and all DETR variants through a single loop.
         """
         self.model.eval()
 
         all_predictions   = []
         all_ground_truths = []
-        
-        # Background Stats Tracking
-        total_empty_images = 0
-        correctly_silent_images = 0
-        hallucinations_on_empty = 0
+
+        total_empty_images       = 0
+        correctly_silent_images  = 0
+        hallucinations_on_empty  = 0
 
         for batch_idx, (pixel_values, pixel_mask, targets) in enumerate(self.data_loader):
-            # Move both the images and the mask to the GPU
             pixel_values = pixel_values.to(self.device)
-            pixel_mask = pixel_mask.to(self.device)
-            
-            # Pass BOTH into the model
+            pixel_mask   = pixel_mask.to(self.device)
+
+            # ==============================================================
+            # FASTER R-CNN BRANCH
+            # ==============================================================
+            if self.arch == 'faster_rcnn':
+                image_list = list(img for img in pixel_values)
+                raw_outputs = self.model(image_list)
+
+                batch_preds = []
+                batch_gts   = []
+
+                for i, (target, result) in enumerate(zip(targets, raw_outputs)):
+                    # ---- Ground Truth ----------------------------------------
+                    gt_labels = self._get_gt_labels(target)
+
+                    orig_h, orig_w = self._get_orig_size(target, pixel_values, i)
+                    gt_boxes_norm  = target.get('boxes', torch.empty((0, 4)))
+                    gt_boxes_pixels = self.normalize_to_pixels(gt_boxes_norm.cpu(), orig_h, orig_w)
+
+                    is_empty_image = (len(gt_boxes_pixels) == 0)
+                    if is_empty_image:
+                        total_empty_images += 1
+                        above_thresh = (result['scores'] > self.bg_threshold).sum().item()
+                        if above_thresh == 0:
+                            correctly_silent_images += 1
+                        else:
+                            hallucinations_on_empty += above_thresh
+
+                    # ---- Predictions -----------------------------------------
+                    keep_mask = result['scores'] >= self.conf_threshold
+                    
+                    pred_boxes = result['boxes'][keep_mask].cpu().clone()
+                    pred_scores = result['scores'][keep_mask].cpu()
+                    pred_labels = result['labels'][keep_mask].cpu()
+
+                    if 'resized_size' in target:
+                        resized_h, resized_w = target['resized_size'].tolist()
+                    else:
+                        resized_h, resized_w = pixel_values.shape[2], pixel_values.shape[3]
+
+                    if len(pred_boxes) > 0:
+                        scale_x = orig_w / resized_w
+                        scale_y = orig_h / resized_h
+                        pred_boxes[:, 0] *= scale_x
+                        pred_boxes[:, 2] *= scale_x
+                        pred_boxes[:, 1] *= scale_y
+                        pred_boxes[:, 3] *= scale_y
+
+                    pred_dict = {
+                        'boxes' : pred_boxes,
+                        'scores': pred_scores,
+                        'labels': pred_labels,
+                    }
+                    gt_dict = {
+                        'boxes' : gt_boxes_pixels,
+                        'labels': gt_labels,
+                    }
+
+                    batch_preds.append(pred_dict)
+                    batch_gts.append(gt_dict)
+                    all_predictions.append(pred_dict)
+                    all_ground_truths.append(gt_dict)
+
+                self.coco_metric.update(batch_preds, batch_gts)
+
+                if batch_idx % 10 == 0:
+                    print(f"  Batch {batch_idx}/{len(self.data_loader)}")
+
+                continue  # skip DETR logic below
+
+            # ==============================================================
+            # DETR / DEFORMABLE-DETR / D-FINE BRANCH
+            # ==============================================================
             outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask)
 
-            # --- BACKGROUND CHECK (Raw Logits Analysis) ---
-            # Check probabilities before post-processing filters them out
-            probs = outputs.logits.softmax(-1)[..., :-1] # Exclude 'no-object' class
+            probs     = outputs.logits.softmax(-1)[..., :-1]
             max_probs = probs.max(-1).values
-            
-            # Use orig_size for post-processing
-            orig_sizes = torch.stack([t['orig_size'] for t in targets]).to(self.device)
 
+            orig_sizes = torch.stack([t['orig_size'] for t in targets]).to(self.device)
             results = self.processor.post_process_object_detection(
-                outputs, 
-                target_sizes=orig_sizes, 
-                threshold=self.conf_threshold
+                outputs, target_sizes=orig_sizes, threshold=self.conf_threshold
             )
 
+            batch_preds = []
+            batch_gts   = []
+
             for i, (target, result) in enumerate(zip(targets, results)):
-                # --- BG Logic ---
-                gt_boxes_norm = target['boxes']
+                gt_boxes_norm = target.get('boxes', torch.empty((0, 4)))
                 is_empty_image = (len(gt_boxes_norm) == 0)
-                
+
                 if is_empty_image:
                     total_empty_images += 1
-                    # Did the model predict anything above the strict BG threshold?
                     num_detections = (max_probs[i] > self.bg_threshold).sum().item()
-                    
                     if num_detections == 0:
                         correctly_silent_images += 1
                     else:
                         hallucinations_on_empty += num_detections
 
-                # --- Standard Logic ---
-                all_predictions.append({
+                pred_dict = {
                     'boxes' : result['boxes'].cpu(),
                     'scores': result['scores'].cpu(),
                     'labels': result['labels'].cpu(),
-                })
+                }
 
-                gt_labels = target['class_labels'].cpu()
-                orig_h, orig_w = target['orig_size'].tolist()
+                orig_h, orig_w  = target['orig_size'].tolist()
                 gt_boxes_pixels = self.normalize_to_pixels(gt_boxes_norm.cpu(), orig_h, orig_w)
+                gt_labels       = self._get_gt_labels(target)
 
-                all_ground_truths.append({
+                gt_dict = {
                     'boxes' : gt_boxes_pixels,
                     'labels': gt_labels,
-                })
+                }
+
+                batch_preds.append(pred_dict)
+                batch_gts.append(gt_dict)
+                all_predictions.append(pred_dict)
+                all_ground_truths.append(gt_dict)
+
+            self.coco_metric.update(batch_preds, batch_gts)
 
             if batch_idx % 10 == 0:
-                print(f"Batch {batch_idx}/{len(self.data_loader)}")
+                print(f"  Batch {batch_idx}/{len(self.data_loader)}")
 
         bg_stats = {
-            "total_empty": total_empty_images,
-            "correct_empty": correctly_silent_images,
-            "hallucinations": hallucinations_on_empty
+            'total_empty'  : total_empty_images,
+            'correct_empty': correctly_silent_images,
+            'hallucinations': hallucinations_on_empty,
         }
-        
+
         return all_predictions, all_ground_truths, bg_stats
 
-    def match_predictions_to_ground_truth(self, predictions, ground_truths):
-        """Match predictions to GT using IoU"""
-        matches = []
+    # ------------------------------------------------------------------
+    # MATCHING & METRICS
+    # ------------------------------------------------------------------
 
+    def match_predictions_to_ground_truth(self, predictions, ground_truths):
+        """Match predictions to GT using IoU (used for Confusion Matrix)"""
+        matches = []
         for pred_dict, gt_dict in zip(predictions, ground_truths):
             pred_boxes  = pred_dict['boxes']
             pred_scores = pred_dict['scores']
@@ -163,26 +262,14 @@ class DETREvaluator:
             gt_boxes    = gt_dict['boxes']
             gt_labels   = gt_dict['labels']
 
-            # Images with no GT annotations (Background images)
             if len(gt_boxes) == 0:
                 for j in range(len(pred_boxes)):
-                    matches.append({
-                        'pred_label': pred_labels[j].item(),
-                        'gt_label'  : None, # Represents Background
-                        'score'     : pred_scores[j].item(),
-                        'matched'   : False,
-                    })
+                    matches.append({'pred_label': pred_labels[j].item(), 'gt_label': None, 'score': pred_scores[j].item(), 'matched': False})
                 continue
 
-            # Images with no predictions (False Negatives)
             if len(pred_boxes) == 0:
                 for j in range(len(gt_boxes)):
-                    matches.append({
-                        'pred_label': None,
-                        'gt_label'  : gt_labels[j].item(),
-                        'score'     : 0.0,
-                        'matched'   : False,
-                    })
+                    matches.append({'pred_label': None, 'gt_label': gt_labels[j].item(), 'score': 0.0, 'matched': False})
                 continue
 
             iou_matrix = self.box_iou(pred_boxes, gt_boxes)
@@ -198,85 +285,47 @@ class DETREvaluator:
 
                 if best_iou >= self.iou_threshold and best_gt_idx not in matched_gt:
                     matched_gt.add(best_gt_idx)
-                    matches.append({
-                        'pred_label': pred_label,
-                        'gt_label'  : gt_labels[best_gt_idx].item(),
-                        'score'     : pred_score,
-                        'matched'   : True,
-                    })
+                    matches.append({'pred_label': pred_label, 'gt_label': gt_labels[best_gt_idx].item(), 'score': pred_score, 'matched': True})
                 else:
-                    matches.append({
-                        'pred_label': pred_label,
-                        'gt_label'  : None, # False Positive
-                        'score'     : pred_score,
-                        'matched'   : False,
-                    })
+                    matches.append({'pred_label': pred_label, 'gt_label': None, 'score': pred_score, 'matched': False})
 
-            # Unmatched GTs = False Negatives
             for j in range(len(gt_boxes)):
                 if j not in matched_gt:
-                    matches.append({
-                        'pred_label': None,
-                        'gt_label'  : gt_labels[j].item(),
-                        'score'     : 0.0,
-                        'matched'   : False,
-                    })
+                    matches.append({'pred_label': None, 'gt_label': gt_labels[j].item(), 'score': 0.0, 'matched': False})
 
         return matches
 
     def compute_confusion_matrix(self, matches, bg_stats):
-        """
-        Compute CM and INJECT True Negatives (Background-Background)
-        """
+        """Compute CM and inject True Negatives"""
         num_classes = self.config['model']['num_object_classes']
-        cm          = np.zeros((num_classes, num_classes), dtype=np.int32)
-        count       = 0
+        cm = np.zeros((num_classes, num_classes), dtype=np.int32)
 
         for m in matches:
             if m['matched']:
-                # True Positive
-                pred, gt = m['pred_label'], m['gt_label']
-                cm[gt, pred] += 1
-                count += 1
+                cm[m['gt_label'], m['pred_label']] += 1
             elif m['gt_label'] is None:
-                # False Positive (Background classified as Object)
-                pred = m['pred_label']
-                cm[0, pred] += 1 # Row 0 is Actual Background
-                count += 1
+                cm[0, m['pred_label']] += 1
             elif m['pred_label'] is None:
-                # False Negative (Object classified as Background/Missed)
-                gt = m['gt_label']
-                cm[gt, 0] += 1 # Col 0 is Predicted Background
-                count += 1
+                cm[m['gt_label'], 0] += 1
 
-        # --- KEY INTEGRATION: Inject True Negatives ---
-        # "Correctly Silent" images are effectively True Negatives for the Background class
-        true_negatives = bg_stats['correct_empty']
-        cm[0, 0] += true_negatives
-        count += true_negatives
-        
-        print(f"  Matched pairs in confusion matrix: {count}")
-        print(f"  (Includes {true_negatives} correctly identified background images)")
-        
+        cm[0, 0] += bg_stats['correct_empty']
         return cm
 
     def compute_pr_curve_data(self, matches):
+        """Generate PR curve data for plotting (Fixed Plotting Artifacts)"""
         num_classes = self.config['model']['num_object_classes']
-        pr_data     = {}
+        pr_data = {}
 
         for class_id in range(num_classes):
-            y_true   = []
-            y_scores = []
+            y_true, y_scores = [], []
+            total_gt = 0  # 1. Track total real birds for accurate recall math
 
             for m in matches:
-                # Check for standard True Positive / False Negative
                 if m.get('gt_label') == class_id:
+                    total_gt += 1  # 2. Count the ground truth
                     if m.get('pred_label') == class_id and m['matched']:
                         y_true.append(1);  y_scores.append(m['score'])
-                    else:
-                        y_true.append(1);  y_scores.append(0.0)
-                
-                # Check for False Positive
+                    # 3. DELETED the artificial 0.0 injection block here!
                 elif m.get('pred_label') == class_id:
                     y_true.append(0);  y_scores.append(m['score'])
 
@@ -284,101 +333,106 @@ class DETREvaluator:
             made_predictions = sum(y_scores) > 0.0
 
             if n_pos > 0 and made_predictions:
-                y_true_arr   = np.array(y_true)
-                y_scores_arr = np.array(y_scores)
-                precision, recall, _ = precision_recall_curve(y_true_arr, y_scores_arr)
-                ap = average_precision_score(y_true_arr, y_scores_arr)
+                precision, recall, _ = precision_recall_curve(np.array(y_true), np.array(y_scores))
+                # 4. Mathematically scale recall to reflect missed birds due to the 10% cutoff
+                if total_gt > 0:
+                    recall = recall * (n_pos / total_gt) 
+                    ap = average_precision_score(np.array(y_true), np.array(y_scores)) * (n_pos / total_gt)
+                else:
+                    ap = 0.0
             else:
-                # If no ground truths OR no predictions were made, AP is 0.0
                 precision = recall = np.array([])
                 ap = 0.0
-            # ---------------------------------------------------------
 
             pr_data[class_id] = {
                 'precision'  : precision,
                 'recall'     : recall,
                 'ap'         : ap,
                 'class_name' : self.class_names[class_id] if class_id < len(self.class_names) else f"class_{class_id}",
-                'num_samples': n_pos,
+                'num_samples': total_gt,
             }
-
         return pr_data
+    # ------------------------------------------------------------------
+    # MAIN ENTRY POINT
+    # ------------------------------------------------------------------
 
     def evaluate(self, epoch=None):
         print(f"\n{'='*60}")
         print(f"Evaluation{f' — Epoch {epoch}' if epoch else ''}")
-        print(f"  Confidence threshold : {self.conf_threshold}")
-        print(f"  BG Check threshold   : {self.bg_threshold}")
         print(f"{'='*60}")
 
         print("Collecting predictions…")
         predictions, ground_truths, bg_stats = self.collect_predictions_and_bg_stats()
 
-        # Summary stats
-        total_preds = sum(len(p['boxes']) for p in predictions)
-        total_gt    = sum(len(g['boxes']) for g in ground_truths)
-        imgs_with_gt = sum(1 for g in ground_truths if len(g['boxes']) > 0)
+        # --- COCO Metrics ---
+        print("\n⏳ Computing COCO Metrics via torchmetrics...")
+        coco_results = self.coco_metric.compute()
+
+        map_50_95 = coco_results['map'].item()
+        map_50    = coco_results['map_50'].item()
+        recall    = coco_results['mar_100'].item()
+        f1_score  = 2 * ((map_50 * recall) / (map_50 + recall)) if (map_50 + recall) > 0 else 0.0
         
-        print(f"\n  Total predictions  : {total_preds}")
-        print(f"  Total GT objects   : {total_gt}")
-        print(f"  Images with GT     : {imgs_with_gt} / {len(ground_truths)}")
-        
-        # --- BG REPORT ---
+        # EXTRACTING SIZE-SPECIFIC METRICS
+        # Returns -1 if no objects of that size exist in the evaluation set
+        map_small  = coco_results.get('map_small', torch.tensor(-1.0)).item()
+        map_medium = coco_results.get('map_medium', torch.tensor(-1.0)).item()
+        map_large  = coco_results.get('map_large', torch.tensor(-1.0)).item()
+
+        print("\n" + "="*50)
+        print("MODEL EVALUATION METRICS")
+        print("="*50)
+        print(f"mAP@0.5      (Headline Precision) : {map_50:.4f}  ({map_50 * 100:.1f}%)")
+        print(f"mAP@0.5:0.95 (Strict Precision)   : {map_50_95:.4f}  ({map_50_95 * 100:.1f}%)")
+        print(f"Recall       (Found Animals)      : {recall:.4f}  ({recall * 100:.1f}%)")
+        print(f"F1-Score     (Combined Balance)   : {f1_score:.4f}  ({f1_score * 100:.1f}%)")
+        print("-" * 50)
+        print("SCALE-SPECIFIC METRICS (FOR COMPRESSION ANALYSIS)")
+        print(f"mAP_Small    (Area < 32^2 px)     : {map_small:.4f}  ({map_small * 100:.1f}%)" if map_small >= 0 else "mAP_Small    (Area < 32^2 px)     : N/A (No small objects)")
+        print(f"mAP_Medium   (32^2 < Area < 96^2) : {map_medium:.4f}  ({map_medium * 100:.1f}%)" if map_medium >= 0 else "mAP_Medium   (32^2 < Area < 96^2) : N/A (No medium objects)")
+        print(f"mAP_Large    (Area > 96^2 px)     : {map_large:.4f}  ({map_large * 100:.1f}%)" if map_large >= 0 else "mAP_Large    (Area > 96^2 px)     : N/A (No large objects)")
+        print("="*50)
+
+        self.coco_metric.reset()
+
+        # --- Background Report ---
         bg_accuracy = 0.0
         if bg_stats['total_empty'] > 0:
-            bg_accuracy = (bg_stats['correct_empty'] / bg_stats['total_empty']) * 100  
+            bg_accuracy = (bg_stats['correct_empty'] / bg_stats['total_empty']) * 100
             print(f"\n  [Background Performance]")
             print(f"  Total Empty Images : {bg_stats['total_empty']}")
             print(f"  Correctly Silent   : {bg_stats['correct_empty']}")
             print(f"  Background Acc     : {bg_accuracy:.2f}%")
-        # -----------------
 
-        print("\nMatching predictions to ground truth…")
+        # --- Confusion Matrix & PR Curves ---
         matches = self.match_predictions_to_ground_truth(predictions, ground_truths)
 
-        # Confusion matrix (Now includes BG Stats!)
-        if self.config.get('evaluation', {}).get('compute_confusion_matrix', True):
-            cm = self.compute_confusion_matrix(matches, bg_stats)
-        else:
-            cm = None
+        cm      = self.compute_confusion_matrix(matches, bg_stats) if self.config.get('evaluation', {}).get('compute_confusion_matrix', True) else None
+        pr_data = self.compute_pr_curve_data(matches)              if self.config.get('evaluation', {}).get('compute_pr_curve', True)        else {}
 
-        # PR curves
-        if self.config.get('evaluation', {}).get('compute_pr_curve', True):
-            pr_data = self.compute_pr_curve_data(matches)
-        else:
-            pr_data = {}
-        
-        # Create all visualizations using the new readable format
         if self.config.get('evaluation', {}).get('save_plots', True) and (cm is not None or pr_data):
             plots_dir = self.config.get('evaluation', {}).get('plots_dir', 'evaluation_plots/')
-            epoch_suffix = f"_epoch_{epoch}" if epoch else "_final"
-            epoch_dir = os.path.join(plots_dir, f"evaluation{epoch_suffix}")
-            
+            epoch_dir = os.path.join(plots_dir, f"evaluation_{epoch}" if epoch else "evaluation_final")
             create_readable_visualizations(
-                metrics={'mAP': 0.0},  # Will be updated below
+                metrics={'mAP': map_50},
                 pr_data=pr_data,
                 confusion_matrix=cm if cm is not None else np.zeros((len(self.class_names), len(self.class_names))),
                 class_names=self.class_names,
-                output_dir=epoch_dir
+                output_dir=epoch_dir,
             )
-        
-        # Calculate mAP
-        if pr_data:
-            # mAP: exclude background (class 0)
-            aps = [d['ap'] for cid, d in pr_data.items()
-                   if cid > 0 and d['num_samples'] > 0]
-            mAP = float(np.mean(aps)) if aps else 0.0
 
-            print(f"\n  mAP@{self.iou_threshold} (excl. background): {mAP:.4f}")
-            
-            metrics = {
-                'mAP'             : mAP,
-                'pr_data'         : pr_data,
-                'confusion_matrix': cm,
-                'bg_accuracy'     : bg_accuracy,
-            }
-        else:
-            metrics = {'mAP': 0.0, 'pr_data': {}, 'confusion_matrix': None}
+        metrics = {
+            'mAP'             : map_50,
+            'mAP_50_95'       : map_50_95,
+            'mAP_Small'       : map_small,
+            'mAP_Medium'      : map_medium,
+            'mAP_Large'       : map_large,
+            'Recall'          : recall,
+            'F1'              : f1_score,
+            'pr_data'         : pr_data,
+            'confusion_matrix': cm,
+            'bg_accuracy'     : bg_accuracy,
+        }
 
         print(f"{'='*60}\n")
         return metrics, pr_data, cm

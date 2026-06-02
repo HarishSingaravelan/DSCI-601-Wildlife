@@ -1,29 +1,35 @@
 # config/config.yaml
 # DETR configuration for turbine_split_all_classes dataset (55 species)
 
+
+
+ablations:
+  use_adaptive_sampler: true  
+  use_inner_siou: true
+
 training:
-  num_epochs: 400              
-  batch_size: 4 # 4 for defomable 
-  num_workers: 0 # 34 on A100 0 for local testing
+  num_epochs: 400 #50 for full             
+  batch_size: 16 # 4 for defomable  1.66batch/sec for 32 
+  num_workers: 34 # 34 on A100 0 for local testing
   learning_rate: 0.0001       
   weight_decay: 0.0001
   # Learning rate scheduler
-  scheduler_step_size: 200       # Reduce LR every N epochs 
+  scheduler_step_size: 40       # Reduce LR every N epochs 
   scheduler_gamma: 0.1          # LR = LR * gamma
   
   # Early stopping
   patience: 50   # Stop if no improvement for N evaluations
   
   device: "cuda"
-  output_model_path: "standard_detr_model.pth"
+  output_model_path: "fasterrcnn_compressed_inner_siou.pth"
 
   # Evaluation
-  eval_every_n_epochs: 5      # Evaluate less frequently (dataset is larger)
+  eval_every_n_epochs: 10      # Evaluate less frequently (dataset is larger)
   save_best_model: true
   
 
   # Checkpointing
-  checkpoint_dir: "checkpoints/standard_detr/"
+  checkpoint_dir: "checkpoints/detr/detr_both/"
   save_checkpoint_every: 10
 
   # Resume from checkpoint
@@ -35,18 +41,19 @@ evaluation:
   confidence_threshold: 0.1   
   iou_threshold: 0.5
   save_plots: true
-  plots_dir: "metrics/evaluation_plots_standard_detr/"
+  plots_dir: "metrics/detr/detr_both/"
   show_plots: false
 
-data:
-  train_images_dir: "."
-  train_ann_file: "turbine_split/train/annotations.json"
 
-  val_images_dir: "."
-  val_ann_file: "turbine_split/val/annotations.json"
+# data:
+#   train_images_dir: "."
+#   train_ann_file: "turbine_split/train/annotations.json"
 
-  test_images_dir: "."
-  test_ann_file: "turbine_split/test/annotations.json"
+#   val_images_dir: "."
+#   val_ann_file: "turbine_split/val/annotations.json"
+
+#   test_images_dir: "."
+#   test_ann_file: "turbine_split/test/annotations.json"
 
 
 
@@ -61,48 +68,70 @@ data:
 #   test_ann_file: "../../../../shared/rc/turbine/turbine_split_all_classes/test/annotations.json"
 
 
-  # use_light_augmentation: true
+##---- compressed image path -------------------------------------
+
+# data:
+#   train_images_dir: "../../../../shared/rc/turbine/resized_dataset_new"
+#   train_ann_file: "../../../../shared/rc/turbine/resized_dataset_new/turbine_split_all_classes/train/annotations.json"
+
+#   val_images_dir: "../../../../shared/rc/turbine/resized_dataset_new"
+#   val_ann_file: "../../../../shared/rc/turbine/resized_dataset_new/turbine_split_all_classes/val/annotations.json"
+
+#   test_images_dir: "../../../../shared/rc/turbine/resized_dataset_new"
+#   test_ann_file: "../../../../shared/rc/turbine/resized_dataset_new/turbine_split_all_classes/test/annotations.json"
+
+## -------------------------Samples----------------------------------
+# data:
+#   train_images_dir: "../../../../shared/rc/turbine/resized_dataset_sample"
+#   train_ann_file: "../../../../shared/rc/turbine/resized_dataset_sample/train/annotations.json"
+
+#   val_images_dir: "../../../../shared/rc/turbine/resized_dataset_sample"
+#   val_ann_file: "../../../../shared/rc/turbine/resized_dataset_sample/val/annotations.json"
+
+#   test_images_dir: "../../../../shared/rc/turbine/resized_dataset_sample"
+#   test_ann_file: "../../../../shared/rc/turbine/resized_dataset_sample/test/annotations.json"
+
+#------------------Samples compressed image path-------------------------------------
+
+# data:
+#   train_images_dir: "../../../../shared/rc/turbine/turbine_sample_100"
+#   train_ann_file: "../../../../shared/rc/turbine/turbine_sample_100/train/annotations.json"
+
+#   val_images_dir: "../../../../shared/rc/turbine/turbine_sample_100"
+#   val_ann_file: "../../../../shared/rc/turbine/turbine_sample_100/val/annotations.json"
+
+#   test_images_dir: "../../../../shared/rc/turbine/turbine_sample_100"
+#   test_ann_file: "../../../../shared/rc/turbine/turbine_sample_100/test/annotations.json"
 
 
-# Option 1: ADAPTIVE SAMPLER (Recommended for medium-large datasets)
-  # Learns optimal class weights from validation performance
-  # Starts with initial_mode, then adapts based on per-class AP
-  use_adaptive_sampler: false
+# --------------------Stratified split all classes-------------------------------------
+# data:
+#   train_images_dir: "../../../../shared/rc/turbine"
+#   train_ann_file: "../../../../shared/rc/turbine/turbine_split_stratified/train/annotations.json"
 
-  # Adaptive sampler settings (only used if use_adaptive_sampler: true)
-  initial_mode: 'equal'         # Start mode: 'equal', 'sqrt', or 'log'
-  adaptation_rate: 0.3          # How fast to adapt (0.1=slow, 0.5=fast)
-  min_weight: 0.02              # <-- Changed to 0.02 (Maintenance dose)
-  max_weight: 5.0               # Maximum weight for any class
-  
-  # --- NEW BACKGROUND SETTINGS ---
-  background_ratio: 0.20        # Initial background ratio (0.5 = 50%)
-  dynamic_background: false      # Automatically adjust BG ratio based on validation
-  min_bg_ratio: 0.02            # Never drop below 15% background
-  max_bg_ratio: 0.50            # Never exceed 50% background
-  
-  # # Adaptive sampler settings (only used if use_adaptive_sampler: true)
-  # initial_mode: 'equal'         # Start mode: 'equal', 'sqrt', or 'log'
-  # adaptation_rate: 0.3          # How fast to adapt (0.1=slow, 0.5=fast)
-  # min_weight: 0.1               # Minimum weight for any class (prevents starvation)
-  # max_weight: 5.0               # Maximum weight for any class (prevents domination)
-  
-  # # Option 2: BALANCED SAMPLER (Recommended for small datasets)
-  # Fixed balancing strategy, doesn't adapt over time
-  use_balanced_sampler: false
-  
-  # Balanced sampler settings (only used if use_balanced_sampler: true)
-  balance_mode: 'log'           # Options: 'equal', 'sqrt', 'log'
-                                # 'equal' = all classes get same samples (high repetition)
-                                # 'sqrt'  = sqrt-weighted (moderate repetition)
-                                # 'log'   = log-weighted (low repetition, best for tiny datasets)
+#   val_images_dir: "../../../../shared/rc/turbine"
+#   val_ann_file: "../../../../shared/rc/turbine/turbine_split_stratified/val/annotations.json"
+
+#   test_images_dir: "../../../../shared/rc/turbine"
+#   test_ann_file: "../../../../shared/rc/turbine/turbine_split_stratified/test/annotations.json"
 
 
+# -----------------Stratified compressed image path-------------------------------------
+data:
+  train_images_dir: "../../../../shared/rc/turbine/resized_dataset_statified"
+  train_ann_file: "../../../../shared/rc/turbine/resized_dataset_statified/turbine_split_stratified/train/annotations.json"
 
-  
-  # Option 3: No sampler (use_adaptive_sampler: false, use_balanced_sampler: false)
-  # Regular random shuffling with natural class distribution
+  val_images_dir: "../../../../shared/rc/turbine/resized_dataset_statified"
+  val_ann_file: "../../../../shared/rc/turbine/resized_dataset_statified/turbine_split_stratified/val/annotations.json"
 
+  test_images_dir: "../../../../shared/rc/turbine/resized_dataset_statified"
+  test_ann_file: "../../../../shared/rc/turbine/resized_dataset_statified/turbine_split_stratified/test/annotations.json"
+
+
+  background_ratio: 0.05        
+  dynamic_background: True      
+  min_bg_ratio: 0.02            
+  max_bg_ratio: 0.50
 
 model:
   num_object_classes: 56       # 55 classes + 1 background padding
@@ -166,8 +195,8 @@ model:
 
                     
 
-  architecture: "dfine"               # Options: "standard_detr" or "deformable_detr" or "dfine"
-  pretrained_model: "ustc-community/dfine_x_coco" # Options: "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
+  architecture: "standard_detr"               # Options: "faster_rcnn" or "standard_detr" or "deformable_detr" or "dfine"
+  pretrained_model: "facebook/detr-resnet-50"          # Options:  "resnet50_fpn" or "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
 
 
 

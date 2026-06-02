@@ -126,7 +126,8 @@ class DETRTransformAdapter:
             x_min, y_min, x_max, y_max = float(boxes[i][0]), float(boxes[i][1]), float(boxes[i][2]), float(boxes[i][3])
             w, h = x_max - x_min, y_max - y_min
             
-            if w > 1.0 and h > 1.0 and x_min >= 0 and y_min >= 0 and x_max <= orig_w + 10 and y_max <= orig_h + 10:
+            # Change w > 1.0 to w >= 1.0 to prevent dropping repaired sub-pixel birds
+            if w >= 1.0 and h >= 1.0 and x_min >= 0 and y_min >= 0 and x_max <= orig_w + 10 and y_max <= orig_h + 10:
                 clamped_x_max = min(x_max, float(orig_w))
                 clamped_y_max = min(y_max, float(orig_h))
                 clamped_w = clamped_x_max - x_min
@@ -150,6 +151,8 @@ class DETRTransformAdapter:
         pixel_values = processed["pixel_values"][0]
         labels = processed["labels"][0]
         labels['orig_size'] = torch.tensor([orig_h, orig_w])
+
+        labels['resized_size'] = torch.tensor([pixel_values.shape[1], pixel_values.shape[2]]) 
         
         return pixel_values, labels
 
@@ -183,6 +186,14 @@ class DETRWithExistingDataPipeline:
                 {"params": [p for n, p in self.model.named_parameters() if "backbone" not in n and p.requires_grad]},
                 {"params": [p for n, p in self.model.named_parameters() if "backbone" in n and p.requires_grad], "lr": config['training']['learning_rate'] * 0.1}, 
             ]
+        
+        elif arch == 'faster_rcnn':
+            print("  -> Bypassing HuggingFace model load (Child class will build Faster R-CNN)")
+            # We MUST still load a processor here so your Dataset class knows how to format the images!
+            self.processor = DetrImageProcessor.from_pretrained('facebook/detr-resnet-50', do_convert_annotations=True)
+            self.model = None  # Leave empty, child class will build it
+            param_dicts = []   # Leave empty, child class will build it
+            
         else:
             self.processor = DetrImageProcessor.from_pretrained(model_name, do_convert_annotations=True)
             self.model = DetrForObjectDetection.from_pretrained(model_name, num_labels=config['model']['num_object_classes'], ignore_mismatched_sizes=True)
@@ -212,7 +223,7 @@ class DETRWithExistingDataPipeline:
             "collate_fn": self.collate_fn,
             "pin_memory": True,
             "persistent_workers": True if config['training']['num_workers'] > 0 else False,
-            "prefetch_factor": 4 if config['training']['num_workers'] > 0 else None
+            "prefetch_factor": 8 if config['training']['num_workers'] > 0 else None
         }
 
         self.val_loader = DataLoader(self.val_dataset, shuffle=False, **loader_kwargs)
@@ -248,8 +259,13 @@ class DETRWithExistingDataPipeline:
             self.train_loader = DataLoader(self.train_dataset, shuffle=True, **loader_kwargs)
             print("\n✓ USING REGULAR SHUFFLING (no sampler)")
         
-        self.optimizer = torch.optim.AdamW(param_dicts, lr=config['training']['learning_rate'], weight_decay=config['training']['weight_decay'])
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=config['training'].get('scheduler_step_size', 30), gamma=config['training'].get('scheduler_gamma', 0.1))
+        if len(param_dicts) > 0:
+            self.optimizer = torch.optim.AdamW(param_dicts, lr=config['training']['learning_rate'], weight_decay=config['training']['weight_decay'])
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=config['training'].get('scheduler_step_size', 30), gamma=config['training'].get('scheduler_gamma', 0.1))
+        else:
+            self.optimizer = None
+            self.scheduler = None
+            print("  -> Bypassing Base Optimizer (Child class will build it)")
         
         self.best_map = 0.0
         self.best_val_loss = float('inf')

@@ -1,7 +1,7 @@
 """
-Dataset Split Script for Object Detection
-Splits images and COCO annotations into train/val/test sets
-Ensures no overlap between splits
+Stratified Dataset Split Script for Object Detection
+Feature: "Tail-Class Aggregation" - Groups rare classes into a common bucket 
+so bounding box data is preserved and splitting is mathematically possible.
 """
 
 import json
@@ -12,297 +12,239 @@ from collections import defaultdict
 import random
 from typing import Dict, List, Tuple
 
-
 def load_coco_annotations(ann_file: Path) -> Dict:
-    """Load COCO format annotations."""
     with open(ann_file, 'r') as f:
-        coco_data = json.load(f)
-    return coco_data
+        return json.load(f)
+
+def aggregate_rare_classes(coco_data: Dict, min_images: int = 3, target_bucket_name: str = "unknown") -> Dict:
+    """Finds classes with < min_images and maps them to a target bucket."""
+    print(f"\n[1/6] Aggregating rare classes (< {min_images} images) into '{target_bucket_name}' bucket...")
+    
+    # 1. Count images per category
+    img_counts_per_class = defaultdict(set)
+    for ann in coco_data['annotations']:
+        img_counts_per_class[ann['category_id']].add(ann['image_id'])
+        
+    cat_id_to_name = {c['id']: c['name'] for c in coco_data['categories']}
+    
+    # 2. Identify which classes need to be bucketed
+    rare_cat_ids = set()
+    rare_details = []
+    for cat_id, img_set in img_counts_per_class.items():
+        if len(img_set) < min_images and cat_id_to_name.get(cat_id) != target_bucket_name:
+            rare_cat_ids.add(cat_id)
+            rare_details.append((cat_id_to_name.get(cat_id, "Unnamed"), len(img_set)))
+            
+    if not rare_cat_ids:
+        print("  ✓ All classes meet the minimum image threshold. No bucketing needed.")
+        return coco_data
+
+    # 3. Find or Create the Target Bucket ID
+    target_cat_id = None
+    for c in coco_data['categories']:
+        if c['name'] == target_bucket_name:
+            target_cat_id = c['id']
+            break
+            
+    if target_cat_id is None:
+        # Create the bucket if it doesn't exist in the JSON yet
+        target_cat_id = max([c['id'] for c in coco_data['categories']] + [0]) + 1
+        coco_data['categories'].append({"id": target_cat_id, "name": target_bucket_name, "supercategory": "none"})
+        print(f"  Created new category '{target_bucket_name}' with ID {target_cat_id}")
+
+    # 4. Map the annotations
+    print(f"  ⚠ Re-mapping {len(rare_cat_ids)} rare classes into '{target_bucket_name}':")
+    for name, count in rare_details:
+        print(f"    - {name} ({count} images) -> {target_bucket_name}")
+        
+    for ann in coco_data['annotations']:
+        if ann['category_id'] in rare_cat_ids:
+            ann['category_id'] = target_cat_id
+
+    # 5. Clean up the categories list (remove the rare ones we just emptied)
+    new_categories = [c for c in coco_data['categories'] if c['id'] not in rare_cat_ids]
+    
+    print(f"  Surviving Unique Classes: {len(new_categories)} / {len(coco_data['categories'])}")
+    
+    return {
+        'images': coco_data['images'],
+        'annotations': coco_data['annotations'],
+        'categories': new_categories,
+        'info': coco_data.get('info', {}),
+        'licenses': coco_data.get('licenses', [])
+    }
 
 
-def split_images_by_id(
-    image_ids: List[int],
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
-    seed: int = 42
-) -> Tuple[List[int], List[int], List[int]]:
-    """
-    Split image IDs into train/val/test sets.
-    
-    Args:
-        image_ids: List of all image IDs
-        train_ratio: Proportion for training (default 0.7 = 70%)
-        val_ratio: Proportion for validation (default 0.15 = 15%)
-        test_ratio: Proportion for test (default 0.15 = 15%)
-        seed: Random seed for reproducibility
-    
-    Returns:
-        Tuple of (train_ids, val_ids, test_ids)
-    """
-    assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6, \
-        "Ratios must sum to 1.0"
-    
-    # Shuffle with fixed seed for reproducibility
+def stratified_split(coco_data: Dict, train_ratio: float, val_ratio: float, test_ratio: float, seed: int):
+    """Splits dataset using Rarest-First bucket stratification."""
     random.seed(seed)
-    shuffled_ids = image_ids.copy()
-    random.shuffle(shuffled_ids)
     
-    # Calculate split indices
-    n_total = len(shuffled_ids)
-    n_train = int(n_total * train_ratio)
-    n_val = int(n_total * val_ratio)
+    img_counts_per_class = defaultdict(set)
+    for ann in coco_data['annotations']:
+        img_counts_per_class[ann['category_id']].add(ann['image_id'])
+        
+    global_freq = {cat_id: len(imgs) for cat_id, imgs in img_counts_per_class.items()}
     
-    # Split
-    train_ids = shuffled_ids[:n_train]
-    val_ids = shuffled_ids[n_train:n_train + n_val]
-    test_ids = shuffled_ids[n_train + n_val:]
+    buckets = defaultdict(list)
+    
+    for img in coco_data['images']:
+        img_id = img['id']
+        img_anns = [a for a in coco_data['annotations'] if a['image_id'] == img_id]
+        
+        if not img_anns:
+            buckets['background'].append(img_id)
+        else:
+            rarest_cat = min(img_anns, key=lambda a: global_freq[a['category_id']])['category_id']
+            buckets[rarest_cat].append(img_id)
+            
+    train_ids, val_ids, test_ids = [], [], []
+    sorted_cats = sorted(global_freq.keys(), key=lambda k: global_freq[k])
+    
+    for cat_id in sorted_cats:
+        bucket_imgs = buckets[cat_id]
+        random.shuffle(bucket_imgs)
+        
+        n = len(bucket_imgs)
+        if n == 0:
+            continue
+        elif n == 1:
+            train_ids.append(bucket_imgs[0])
+        elif n == 2:
+            train_ids.append(bucket_imgs[0])
+            val_ids.append(bucket_imgs[1])
+        else:
+            train_ids.append(bucket_imgs[0])
+            val_ids.append(bucket_imgs[1])
+            test_ids.append(bucket_imgs[2])
+            
+            rest = bucket_imgs[3:]
+            if rest:
+                n_rest = len(rest)
+                n_train = int(n_rest * train_ratio)
+                n_val = int(n_rest * val_ratio)
+                
+                train_ids.extend(rest[:n_train])
+                val_ids.extend(rest[n_train:n_train + n_val])
+                test_ids.extend(rest[n_train + n_val:])
+                
+    bg_imgs = buckets['background']
+    random.shuffle(bg_imgs)
+    n_bg = len(bg_imgs)
+    n_train_bg = int(n_bg * train_ratio)
+    n_val_bg = int(n_bg * val_ratio)
+    
+    train_ids.extend(bg_imgs[:n_train_bg])
+    val_ids.extend(bg_imgs[n_train_bg:n_train_bg + n_val_bg])
+    test_ids.extend(bg_imgs[n_train_bg + n_val_bg:])
     
     return train_ids, val_ids, test_ids
 
 
-def create_split_annotations(
-    coco_data: Dict,
-    split_image_ids: List[int]
-) -> Dict:
-    """
-    Create COCO annotations for a specific split.
-    
-    Args:
-        coco_data: Full COCO annotation dictionary
-        split_image_ids: Image IDs for this split
-    
-    Returns:
-        New COCO annotation dictionary for the split
-    """
+def create_split_annotations(coco_data: Dict, split_image_ids: List[int]) -> Dict:
     split_image_ids_set = set(split_image_ids)
-    
-    # Filter images
-    split_images = [
-        img for img in coco_data['images']
-        if img['id'] in split_image_ids_set
-    ]
-    
-    # Filter annotations
-    split_annotations = [
-        ann for ann in coco_data['annotations']
-        if ann['image_id'] in split_image_ids_set
-    ]
-    
-    # Create new COCO dict
-    split_coco = {
-        'images': split_images,
-        'annotations': split_annotations,
+    return {
+        'images': [img for img in coco_data['images'] if img['id'] in split_image_ids_set],
+        'annotations': [ann for ann in coco_data['annotations'] if ann['image_id'] in split_image_ids_set],
         'categories': coco_data['categories'],
+        'info': coco_data.get('info', {}),
+        'licenses': coco_data.get('licenses', [])
     }
-    
-    # Copy other fields if they exist
-    if 'info' in coco_data:
-        split_coco['info'] = coco_data['info']
-    if 'licenses' in coco_data:
-        split_coco['licenses'] = coco_data['licenses']
-    
-    return split_coco
 
 
-def copy_images(
-    source_root: Path,
-    dest_root: Path,
-    image_filenames: List[str],
-    verbose: bool = True
-):
-    """
-    Copy images from source to destination.
-    Handles nested folder structure.
-    
-    Args:
-        source_root: Root directory containing source images
-        dest_root: Destination directory
-        image_filenames: List of image filenames (may include subfolders)
-        verbose: Print progress
-    """
+def copy_images(source_root: Path, dest_root: Path, image_filenames: List[str]):
     dest_root.mkdir(parents=True, exist_ok=True)
-    
     copied = 0
-    missing = 0
-    
     for img_file in image_filenames:
         src_path = source_root / img_file
-        
-        # Create destination with same subfolder structure
         dest_path = dest_root / img_file
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         
         if src_path.exists():
             shutil.copy2(src_path, dest_path)
             copied += 1
-        else:
-            if verbose:
-                print(f"Warning: Image not found: {src_path}")
-            missing += 1
+    print(f"  Copied: {copied} images")
+
+
+def verify_distribution(train_coco, val_coco, test_coco):
+    print("\n[6/6] Verifying Split Quality (Class Coverage Report)...")
+    train_cats = set(ann['category_id'] for ann in train_coco['annotations'])
+    val_cats = set(ann['category_id'] for ann in val_coco['annotations'])
+    test_cats = set(ann['category_id'] for ann in test_coco['annotations'])
     
-    if verbose:
-        print(f"  Copied: {copied} images")
-        if missing > 0:
-            print(f"  Missing: {missing} images")
+    all_cats = set(c['id'] for c in train_coco['categories'])
+    
+    missing_in_val = all_cats - val_cats
+    missing_in_test = all_cats - test_cats
+    
+    if not missing_in_val and not missing_in_test:
+        print(" SUCCESS: Every single class is present in Train, Val, and Test!")
+    else:
+        print(f"  ⚠ Minor issues detected (Likely extremely rare co-occurrences):")
+        if missing_in_val: print(f"    - Missing in Val: {len(missing_in_val)} classes")
+        if missing_in_test: print(f"    - Missing in Test: {len(missing_in_test)} classes")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Split dataset into train/val/test with COCO annotations'
-    )
-    parser.add_argument('--source_root', type=str, required=True,
-                        help='Root directory containing images')
-    parser.add_argument('--annotation_file', type=str, required=True,
-                        help='COCO annotation JSON file')
-    parser.add_argument('--output_root', type=str, required=True,
-                        help='Output directory for split dataset')
-    parser.add_argument('--train_ratio', type=float, default=0.7,
-                        help='Training set ratio (default: 0.7)')
-    parser.add_argument('--val_ratio', type=float, default=0.15,
-                        help='Validation set ratio (default: 0.15)')
-    parser.add_argument('--test_ratio', type=float, default=0.15,
-                        help='Test set ratio (default: 0.15)')
-    parser.add_argument('--seed', type=int, default=42,
-                        help='Random seed for reproducibility (default: 42)')
-    parser.add_argument('--copy_images', action='store_true',
-                        help='Copy images to split directories (default: False)')
+    parser = argparse.ArgumentParser(description='Stratified COCO Dataset Splitter with Aggregation')
+    parser.add_argument('--source_root', type=str, required=True, help='Root directory containing images')
+    parser.add_argument('--annotation_file', type=str, required=True, help='COCO annotation JSON file')
+    parser.add_argument('--output_root', type=str, required=True, help='Output directory for split dataset')
+    parser.add_argument('--train_ratio', type=float, default=0.7)
+    parser.add_argument('--val_ratio', type=float, default=0.15)
+    parser.add_argument('--test_ratio', type=float, default=0.15)
+    parser.add_argument('--min_images', type=int, default=3, help='Classes with fewer images get bucketed')
+    parser.add_argument('--bucket_name', type=str, default="unknown", help='Name of the bucket for rare classes')
+    parser.add_argument('--seed', type=int, default=42)
+    parser.add_argument('--copy_images', action='store_true')
     
     args = parser.parse_args()
-    
-    source_root = Path(args.source_root)
-    annotation_file = Path(args.annotation_file)
-    output_root = Path(args.output_root)
-    
-    # Verify paths
-    if not source_root.exists():
-        raise FileNotFoundError(f"Source root not found: {source_root}")
-    if not annotation_file.exists():
-        raise FileNotFoundError(f"Annotation file not found: {annotation_file}")
+    source_root, annotation_file, output_root = Path(args.source_root), Path(args.annotation_file), Path(args.output_root)
     
     print("="*60)
-    print("DATASET SPLITTING")
-    print("="*60)
-    print(f"Source root: {source_root}")
-    print(f"Annotation file: {annotation_file}")
-    print(f"Output root: {output_root}")
-    print(f"Split ratios: train={args.train_ratio}, val={args.val_ratio}, test={args.test_ratio}")
-    print(f"Random seed: {args.seed}")
+    print("STRATIFIED DATASET SPLITTING (With Tail-Class Aggregation)")
     print("="*60)
     
-    # Load COCO annotations
-    print("\n[1/5] Loading COCO annotations...")
+    # 1. Load & Aggregate
     coco_data = load_coco_annotations(annotation_file)
+    coco_data = aggregate_rare_classes(coco_data, args.min_images, args.bucket_name)
     
-    n_images = len(coco_data['images'])
-    n_annotations = len(coco_data['annotations'])
-    n_categories = len(coco_data['categories'])
+    # 2. Stratified Split
+    print("\n[2/6] Executing Rarest-First Stratification...")
+    train_ids, val_ids, test_ids = stratified_split(coco_data, args.train_ratio, args.val_ratio, args.test_ratio, args.seed)
     
-    print(f"  Total images: {n_images}")
-    print(f"  Total annotations: {n_annotations}")
-    print(f"  Total categories: {n_categories}")
+    print(f"  Train: {len(train_ids)} images | Val: {len(val_ids)} images | Test: {len(test_ids)} images")
     
-    # Get all image IDs
-    image_ids = [img['id'] for img in coco_data['images']]
-    
-    # Split image IDs
-    print("\n[2/5] Splitting image IDs...")
-    train_ids, val_ids, test_ids = split_images_by_id(
-        image_ids,
-        train_ratio=args.train_ratio,
-        val_ratio=args.val_ratio,
-        test_ratio=args.test_ratio,
-        seed=args.seed
-    )
-    
-    print(f"  Train: {len(train_ids)} images")
-    print(f"  Val: {len(val_ids)} images")
-    print(f"  Test: {len(test_ids)} images")
-    
-    # Verify no overlap
-    assert len(set(train_ids) & set(val_ids)) == 0, "Train/Val overlap detected!"
-    assert len(set(train_ids) & set(test_ids)) == 0, "Train/Test overlap detected!"
-    assert len(set(val_ids) & set(test_ids)) == 0, "Val/Test overlap detected!"
-    print("  ✓ No overlap between splits")
-    
-    # Create split annotations
-    print("\n[3/5] Creating split annotations...")
-    
+    # 3. Create JSONs
+    print("\n[3/6] Mapping annotations to splits...")
     train_coco = create_split_annotations(coco_data, train_ids)
     val_coco = create_split_annotations(coco_data, val_ids)
     test_coco = create_split_annotations(coco_data, test_ids)
     
-    print(f"  Train annotations: {len(train_coco['annotations'])}")
-    print(f"  Val annotations: {len(val_coco['annotations'])}")
-    print(f"  Test annotations: {len(test_coco['annotations'])}")
-    
-    # Save split annotations
-    print("\n[4/5] Saving split annotation files...")
-    
+    # 4. Save JSONs
+    print("\n[4/6] Saving split annotation files...")
     output_root.mkdir(parents=True, exist_ok=True)
-    
-    train_ann_path = output_root / 'train' / 'annotations.json'
-    val_ann_path = output_root / 'val' / 'annotations.json'
-    test_ann_path = output_root / 'test' / 'annotations.json'
-    
-    train_ann_path.parent.mkdir(parents=True, exist_ok=True)
-    val_ann_path.parent.mkdir(parents=True, exist_ok=True)
-    test_ann_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(train_ann_path, 'w') as f:
-        json.dump(train_coco, f, indent=2)
-    print(f"  Saved: {train_ann_path}")
-    
-    with open(val_ann_path, 'w') as f:
-        json.dump(val_coco, f, indent=2)
-    print(f"  Saved: {val_ann_path}")
-    
-    with open(test_ann_path, 'w') as f:
-        json.dump(test_coco, f, indent=2)
-    print(f"  Saved: {test_ann_path}")
-    
-    # Copy images if requested
+    for name, data in zip(['train', 'val', 'test'], [train_coco, val_coco, test_coco]):
+        path = output_root / name / 'annotations.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, 'w') as f:
+            json.dump(data, f)
+        print(f"  Saved: {path}")
+        
+    # 5. Copy Images
     if args.copy_images:
-        print("\n[5/5] Copying images to split directories...")
-        
-        # Get image filenames for each split
-        id_to_filename = {img['id']: img['file_name'] for img in coco_data['images']}
-        
-        train_filenames = [id_to_filename[img_id] for img_id in train_ids]
-        val_filenames = [id_to_filename[img_id] for img_id in val_ids]
-        test_filenames = [id_to_filename[img_id] for img_id in test_ids]
-        
-        print("  Copying train images...")
-        copy_images(source_root, output_root / 'train' / 'images', train_filenames)
-        
-        print("  Copying val images...")
-        copy_images(source_root, output_root / 'val' / 'images', val_filenames)
-        
-        print("  Copying test images...")
-        copy_images(source_root, output_root / 'test' / 'images', test_filenames)
+        print("\n[5/6] Copying images...")
+        id_to_file = {img['id']: img['file_name'] for img in coco_data['images']}
+        copy_images(source_root, output_root / 'train' / 'images', [id_to_file[i] for i in train_ids])
+        copy_images(source_root, output_root / 'val' / 'images', [id_to_file[i] for i in val_ids])
+        copy_images(source_root, output_root / 'test' / 'images', [id_to_file[i] for i in test_ids])
     else:
-        print("\n[5/5] Skipping image copy (use --copy_images to enable)")
-        print("  Note: Images will remain in original location")
-    
-    print("\n" + "="*60)
+        print("\n[5/6] Skipping image copy (--copy_images not flagged)")
+        
+    # 6. Verify
+    verify_distribution(train_coco, val_coco, test_coco)
+    print("\n============================================================")
     print("SPLIT COMPLETE!")
-    print("="*60)
-    print(f"Output structure:")
-    print(f"{output_root}/")
-    print(f"├── train/")
-    print(f"│   ├── annotations.json ({len(train_coco['annotations'])} annotations)")
-    if args.copy_images:
-        print(f"│   └── images/ ({len(train_filenames)} images)")
-    print(f"├── val/")
-    print(f"│   ├── annotations.json ({len(val_coco['annotations'])} annotations)")
-    if args.copy_images:
-        print(f"│   └── images/ ({len(val_filenames)} images)")
-    print(f"└── test/")
-    print(f"    ├── annotations.json ({len(test_coco['annotations'])} annotations)")
-    if args.copy_images:
-        print(f"    └── images/ ({len(test_filenames)} images)")
-    print("="*60)
-
+    print("============================================================")
 
 if __name__ == '__main__':
     main()

@@ -62,8 +62,11 @@ class TurbineCocoDataset(CocoDetection):
     def __getitem__(self, idx: int) -> Tuple[Any, Dict[str, torch.Tensor]]:
         # ---- SAFE IMAGE LOADING ----
         img, anns, valid_idx = self._safe_load(idx)
+        
+        # 1. Get the actual pixel dimensions of the loaded image
+        img_w, img_h = img.size 
 
-        # ---- TARGET BUILDING (your original logic) ----
+        # ---- TARGET BUILDING ----
         boxes: List[List[float]] = []
         labels: List[int] = []
         areas: List[float] = []
@@ -71,14 +74,38 @@ class TurbineCocoDataset(CocoDetection):
 
         for obj in anns:
             bbox = obj["bbox"]
-            x_min = bbox[0]
-            y_min = bbox[1]
-            x_max = x_min + bbox[2]
-            y_max = y_min + bbox[3]
-            boxes.append([x_min, y_min, x_max, y_max])
+            w = float(bbox[2])
+            h = float(bbox[3])
 
+            # Drop heavily corrupted/negative annotations
+            if w <= 0.0 or h <= 0.0:
+                continue
+            
+            x_min = float(bbox[0])
+            y_min = float(bbox[1])
+            
+            # Force minimum 1-pixel dimensions
+            x_max = x_min + max(1.0, w)
+            y_max = y_min + max(1.0, h)
+            
+            # =======================================================
+            # NEW FIX: Clamp the bounding box to the image boundaries!
+            # If the box pokes off the edge, this trims it flush.
+            # =======================================================
+            x_min = max(0.0, x_min)
+            y_min = max(0.0, y_min)
+            x_max = min(float(img_w), x_max)
+            y_max = min(float(img_h), y_max)
+            
+            # Double check that the clamping didn't destroy the box
+            if x_max - x_min < 1.0 or y_max - y_min < 1.0:
+                continue
+            
+            boxes.append([x_min, y_min, x_max, y_max])
             labels.append(obj.get("category_id", 1))
-            areas.append(float(obj.get("area", bbox[2] * bbox[3])))
+            
+            # Recalculate area based on the newly clamped dimensions
+            areas.append(float((x_max - x_min) * (y_max - y_min)))
             iscrowd.append(int(obj.get("iscrowd", 0)))
 
         if len(boxes) == 0:

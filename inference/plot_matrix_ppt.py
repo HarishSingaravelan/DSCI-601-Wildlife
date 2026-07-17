@@ -6,7 +6,7 @@ import seaborn as sns
 # ==========================================
 # SETTINGS
 # ==========================================
-CSV_PATH = "metrics/evaluation_plots_dfine/evaluation_epoch_270/confusion_matrix_raw.csv" 
+CSV_PATH = "metrics/dfine/detr_adaptive_inner_siou/evaluation_100/confusion_matrix_raw.csv" 
 FIG_SIZE = (16, 9) # Widescreen PPT format
 # ==========================================
 
@@ -70,9 +70,9 @@ def generate_ppt_confusion_matrix():
     plt.tight_layout()
     
     # --- TRICK 4: HIGH RESOLUTION ---
-    output_file = "confusion_matrix_ppt.png"
+    output_file = "confusion_matrix_ppt_dfine.png"
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"✅ Saved beautiful PPT-ready matrix to: {output_file}")
+    print(f"✅ Saved file: {output_file}")
     
     plt.close()
 

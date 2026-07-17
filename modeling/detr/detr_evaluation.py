@@ -6,6 +6,7 @@ Fixes/Upgrades:
   3. Maintained Confusion Matrix generation
   4. Fixed Faster R-CNN label indexing, box scaling, and Chatty Model (confidence thresholding) bugs
   5. ADDED Scale-Specific Metrics (mAP_Small, mAP_Medium, mAP_Large) for compression analysis
+  6. FIXED Background Accuracy logic to strictly obey evaluation confidence thresholds
 """
 
 import torch
@@ -27,7 +28,6 @@ class DETREvaluator:
 
         self.iou_threshold  = config.get('evaluation', {}).get('iou_threshold', 0.5)
         self.conf_threshold = config.get('evaluation', {}).get('confidence_threshold', 0.1)
-        self.bg_threshold   = bg_threshold
 
         self.class_names = config.get('model', {}).get(
             'class_names',
@@ -136,21 +136,21 @@ class DETREvaluator:
                     gt_boxes_norm  = target.get('boxes', torch.empty((0, 4)))
                     gt_boxes_pixels = self.normalize_to_pixels(gt_boxes_norm.cpu(), orig_h, orig_w)
 
-                    is_empty_image = (len(gt_boxes_pixels) == 0)
-                    if is_empty_image:
-                        total_empty_images += 1
-                        above_thresh = (result['scores'] > self.bg_threshold).sum().item()
-                        if above_thresh == 0:
-                            correctly_silent_images += 1
-                        else:
-                            hallucinations_on_empty += above_thresh
-
                     # ---- Predictions -----------------------------------------
                     keep_mask = result['scores'] >= self.conf_threshold
                     
                     pred_boxes = result['boxes'][keep_mask].cpu().clone()
                     pred_scores = result['scores'][keep_mask].cpu()
                     pred_labels = result['labels'][keep_mask].cpu()
+
+                    is_empty_image = (len(gt_boxes_pixels) == 0)
+                    if is_empty_image:
+                        total_empty_images += 1
+                        above_thresh = len(pred_scores)
+                        if above_thresh == 0:
+                            correctly_silent_images += 1
+                        else:
+                            hallucinations_on_empty += above_thresh
 
                     if 'resized_size' in target:
                         resized_h, resized_w = target['resized_size'].tolist()
@@ -192,9 +192,6 @@ class DETREvaluator:
             # ==============================================================
             outputs = self.model(pixel_values=pixel_values, pixel_mask=pixel_mask)
 
-            probs     = outputs.logits.softmax(-1)[..., :-1]
-            max_probs = probs.max(-1).values
-
             orig_sizes = torch.stack([t['orig_size'] for t in targets]).to(self.device)
             results = self.processor.post_process_object_detection(
                 outputs, target_sizes=orig_sizes, threshold=self.conf_threshold
@@ -209,7 +206,9 @@ class DETREvaluator:
 
                 if is_empty_image:
                     total_empty_images += 1
-                    num_detections = (max_probs[i] > self.bg_threshold).sum().item()
+                    # STRICT FIX: The post_process function already dropped boxes below conf_threshold.
+                    # We just count how many boxes survived the filter.
+                    num_detections = len(result['scores'])
                     if num_detections == 0:
                         correctly_silent_images += 1
                     else:
@@ -325,7 +324,6 @@ class DETREvaluator:
                     total_gt += 1  # 2. Count the ground truth
                     if m.get('pred_label') == class_id and m['matched']:
                         y_true.append(1);  y_scores.append(m['score'])
-                    # 3. DELETED the artificial 0.0 injection block here!
                 elif m.get('pred_label') == class_id:
                     y_true.append(0);  y_scores.append(m['score'])
 
@@ -352,6 +350,7 @@ class DETREvaluator:
                 'num_samples': total_gt,
             }
         return pr_data
+
     # ------------------------------------------------------------------
     # MAIN ENTRY POINT
     # ------------------------------------------------------------------

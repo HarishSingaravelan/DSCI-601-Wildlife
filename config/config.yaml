@@ -5,13 +5,13 @@
 
 ablations:
   use_adaptive_sampler: true  
-  use_inner_siou: true
+  use_inner_siou: false
 
 training:
   num_epochs: 400 #50 for full             
   batch_size: 16 # 4 for defomable  1.66batch/sec for 32 
   num_workers: 34 # 34 on A100 0 for local testing
-  learning_rate: 0.0001       
+  learning_rate: 0.00001      
   weight_decay: 0.0001
   # Learning rate scheduler
   scheduler_step_size: 40       # Reduce LR every N epochs 
@@ -21,16 +21,16 @@ training:
   patience: 50   # Stop if no improvement for N evaluations
   
   device: "cuda"
-  output_model_path: "fasterrcnn_compressed_inner_siou.pth"
+  output_model_path: "models/dfine/detr_adaptive.pth"
 
   # Evaluation
-  eval_every_n_epochs: 10      # Evaluate less frequently (dataset is larger)
+  eval_every_n_epochs: 5      # Evaluate less frequently (dataset is larger)
   save_best_model: true
   
 
   # Checkpointing
-  checkpoint_dir: "checkpoints/detr/detr_both/"
-  save_checkpoint_every: 10
+  checkpoint_dir: "checkpoints/dfine/detr_adaptive/"
+  save_checkpoint_every: 5
 
   # Resume from checkpoint
   resume_checkpoint: null # set null if starting fresh
@@ -38,10 +38,10 @@ training:
 evaluation:
   compute_pr_curve: true
   compute_confusion_matrix: true
-  confidence_threshold: 0.1   
+  confidence_threshold: 0.5  
   iou_threshold: 0.5
   save_plots: true
-  plots_dir: "metrics/detr/detr_both/"
+  plots_dir: "metrics/dfine/detr_adaptive/"
   show_plots: false
 
 
@@ -130,7 +130,7 @@ data:
 
   background_ratio: 0.05        
   dynamic_background: True      
-  min_bg_ratio: 0.02            
+  min_bg_ratio: 0.00            
   max_bg_ratio: 0.50
 
 model:
@@ -195,8 +195,8 @@ model:
 
                     
 
-  architecture: "standard_detr"               # Options: "faster_rcnn" or "standard_detr" or "deformable_detr" or "dfine"
-  pretrained_model: "facebook/detr-resnet-50"          # Options:  "resnet50_fpn" or "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
+  architecture: "dfine"               # Options: "faster_rcnn" or "standard_detr" or "deformable_detr" or "dfine"
+  pretrained_model: "ustc-community/dfine_x_coco"          # Options:  "resnet50_fpn" or "facebook/detr-resnet-50" or "SenseTime/deformable-detr" or "ustc-community/dfine_x_coco"
 
 
 

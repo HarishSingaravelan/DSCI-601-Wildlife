@@ -3,17 +3,21 @@ import yaml
 import os
 import sys
 from pathlib import Path
-from transformers import DetrForObjectDetection, DetrImageProcessor
 from torch.utils.data import DataLoader
 
 # ==========================================
 # PATH FIX: Add project root to sys.path
 # ==========================================
-# This ensures Python can find 'modeling' and 'turbine_processing'
 ROOT_DIR = Path(__file__).resolve().parents[1]  
 sys.path.insert(0, str(ROOT_DIR))
 
-# Now we can safely import your custom modules
+# Import all possible architectures
+from transformers import (
+    DetrForObjectDetection, DetrImageProcessor,
+    DFineForObjectDetection, AutoImageProcessor,
+    DeformableDetrForObjectDetection, DeformableDetrImageProcessor
+)
+
 from modeling.detr.detr_evaluation import DETREvaluator
 from modeling.detr.detr_with_existing_pipeline import DETRTransformAdapter, DETRWithExistingDataPipeline
 from turbine_processing.dataset import TurbineCocoDataset
@@ -22,8 +26,8 @@ from turbine_processing.transforms_detr import get_val_transform_detr
 # ==========================================
 # SETTINGS: TWEAK THESE FOR YOUR EXPERIMENTS
 # ==========================================
-CHECKPOINT_PATH = "checkpoints/full_run_log_sampler_confidence_0.5_bg/checkpoint_epoch_290.pth" 
-CUSTOM_THRESHOLD = 0.3  # <--- Change this to test 0.20, 0.50, etc. without retraining!
+CHECKPOINT_PATH = "checkpoints/dfine/detr_adaptive_inner_siou/epoch_100.pth" # <-- Update to your D-FINE checkpoint
+CUSTOM_THRESHOLD = 0.1  # <--- Change this to test 0.40, 0.50, etc.
 CONFIG_PATH = "config/config.yaml"
 # ==========================================
 
@@ -32,28 +36,42 @@ def run_manual_eval():
     print(f"Target Threshold: {CUSTOM_THRESHOLD}")
     
     # 1. Load config
+    if not os.path.exists(CONFIG_PATH):
+        raise FileNotFoundError(f"Cannot find config at {CONFIG_PATH}")
+        
     with open(CONFIG_PATH, 'r') as f:
         config = yaml.safe_load(f)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device.type.upper()}")
 
-    # 2. Load Processor and Model
-    processor = DetrImageProcessor.from_pretrained(
-        "facebook/detr-resnet-50", 
-        do_convert_annotations=True
-    )
-    model = DetrForObjectDetection.from_pretrained(
-        "facebook/detr-resnet-50",
-        num_labels=config['model']['num_object_classes'],
-        ignore_mismatched_sizes=True
-    )
+    # 2. DYNAMICALLY Load Processor and Model based on config
+    arch = config['model'].get('architecture', 'standard_detr').lower()
+    model_name = config['model'].get('pretrained_model', 'facebook/detr-resnet-50')
+    num_classes = config['model']['num_object_classes']
+    
+    print(f"Initializing Architecture: {arch.upper()} from {model_name}")
+
+    if arch == 'dfine':
+        processor = AutoImageProcessor.from_pretrained(model_name)
+        model = DFineForObjectDetection.from_pretrained(
+            model_name, num_labels=num_classes, ignore_mismatched_sizes=True
+        )
+    elif arch == 'deformable_detr':
+        processor = DeformableDetrImageProcessor.from_pretrained(model_name)
+        model = DeformableDetrForObjectDetection.from_pretrained(
+            model_name, num_labels=num_classes, ignore_mismatched_sizes=True
+        )
+    else:
+        processor = DetrImageProcessor.from_pretrained(model_name)
+        model = DetrForObjectDetection.from_pretrained(
+            model_name, num_labels=num_classes, ignore_mismatched_sizes=True
+        )
     
     # 3. Load specific weights
     print(f"Loading weights from: {CHECKPOINT_PATH}")
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=device, weights_only=False)
     
-    # Handle both raw state_dicts and full checkpoint dictionaries
     if "model_state_dict" in checkpoint:
         model.load_state_dict(checkpoint["model_state_dict"])
     else:
@@ -72,7 +90,7 @@ def run_manual_eval():
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=config['training']['batch_size'],
+        batch_size=config['training'].get('batch_size', 8),
         shuffle=False,
         num_workers=config['training'].get('num_workers', 4),
         collate_fn=DETRWithExistingDataPipeline.collate_fn
@@ -89,14 +107,13 @@ def run_manual_eval():
         data_loader=val_loader,
         processor=processor,
         device=device,
-        config=config,
-        bg_threshold = 0.3
+        config=config
     )
 
     with torch.no_grad():
-        metrics, pr_data, confusion_matrix = evaluator.evaluate(
-            epoch=f"manual_test_thresh_{CUSTOM_THRESHOLD}"
-        )
+        # This string determines the final folder name!
+        folder_name = f"manual_test_thresh_{CUSTOM_THRESHOLD}"
+        metrics, pr_data, confusion_matrix = evaluator.evaluate(epoch=folder_name)
 
     # 6. Print Summary
     print("\n" + "="*50)
@@ -104,9 +121,12 @@ def run_manual_eval():
     print("="*50)
     print(f"Tested Checkpoint : {os.path.basename(CHECKPOINT_PATH)}")
     print(f"Confidence Thresh : {CUSTOM_THRESHOLD}")
-    print(f"Overall mAP       : {metrics.get('mAP', 0.0):.4f}")
+    print(f"Overall mAP@0.5   : {metrics.get('mAP', 0.0):.4f}")
+    print(f"Background Acc    : {metrics.get('bg_accuracy', 0.0):.2f}%")
     print("="*50)
-    print("Check your evaluation output folder for the newly generated confusion matrices and plots!")
+    
+    output_path = os.path.join(config['evaluation']['plots_dir'], f"evaluation_{folder_name}")
+    print(f"Outputs saved to: {output_path}")
 
 if __name__ == "__main__":
     run_manual_eval()
